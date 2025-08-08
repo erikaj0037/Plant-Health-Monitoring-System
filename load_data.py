@@ -320,7 +320,7 @@ class Loader():
             pickle.dump(test_set_info, f)
                 
     def load_data(self):
-        n_neighbors = 50
+        n_neighbors = 20
         n_components = 10
         self.gather_data(n_neighbors, n_components)
         # self.split_data(n_components)
