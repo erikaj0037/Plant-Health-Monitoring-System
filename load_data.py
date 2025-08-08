@@ -163,7 +163,7 @@ class Loader():
     #                                 print("getting labels...")
                                 labels_DF = pd.read_csv(csv_file)
     #                             print(labels_DF.to_numpy())
-                                labels.append(labels_DF.to_list())
+                                labels.append(labels_DF.tolist())
 
                             else: 
                                 labels.append([0])
@@ -213,7 +213,6 @@ class Loader():
             with open('./datasets/reduced_data/' + str(month_folder.name) + '/images.pkl', 'rb') as f:
                 images = pickle.load(f)
                 
-                
             with open('./datasets/reduced_data/' + str(month_folder.name) + '/labels.pkl', 'rb') as f:
                 labels = pickle.load(f)
 
@@ -221,8 +220,10 @@ class Loader():
                 info = pickle.load(f)
             
             indices = np.arange(len(images))
+            #verifying equal length of images, labels, and info lists
             print(len(images))
             print(len(labels))
+            print(len(info))
             random.shuffle(indices)
             # print(len(labels))
             
@@ -250,15 +251,15 @@ class Loader():
             labels_val = labels_train_val[val_thresh:]
             info_val = info_train_val[val_thresh:]
             
-            train_set_images  = np.append(train_set_images, images_train, axis = 0)
+            train_set_images = np.append(train_set_images, images_train, axis = 0)
             train_set_labels += labels_train
             train_set_info += info_train
             
-            val_set_images  = np.append(val_set_images, images_val, axis = 0)
+            val_set_images = np.append(val_set_images, images_val, axis = 0)
             val_set_labels += labels_val
             val_set_info += info_val
             
-            test_set_images  = np.append(test_set_images, images_test, axis = 0)
+            test_set_images = np.append(test_set_images, images_test, axis = 0)
             test_set_labels += labels_test
             test_set_info += info_test
             
