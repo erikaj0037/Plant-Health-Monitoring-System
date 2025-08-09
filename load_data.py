@@ -163,7 +163,7 @@ class Loader():
     #                                 print("getting labels...")
                                 labels_DF = pd.read_csv(csv_file)
     #                             print(labels_DF.to_numpy())
-                                labels.append(labels_DF.tolist())
+                                labels.append(labels_DF.values.tolist())
 
                             else: 
                                 labels.append([0])
