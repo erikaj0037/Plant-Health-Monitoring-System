@@ -115,7 +115,7 @@ class Loader():
         for month_folder in sorted(path.iterdir()):
             if month_folder.name[0] == ".":
                     continue
-            if month_folder.name == 'july21':
+            if month_folder.name == 'march21':
                 continue
             
             print("month:", month_folder.name)
@@ -184,6 +184,7 @@ class Loader():
             with open('./datasets/reduced_data/' + str(month_folder.name) + '/labels.pkl', 'wb') as f:
                 pickle.dump(labels, f)
 
+            print("info list size: " + str(len(info)))
             with open('./datasets/reduced_data/' + str(month_folder.name) + '/info.pkl', 'wb') as f:
                 pickle.dump(info, f)
            
@@ -292,31 +293,31 @@ class Loader():
         test_set_info = [test_set_info[k] for k in i]
         
         ###insert avg function
-        with open('./datsets/reduced_data/sets/train_images.pkl', 'wb') as f:
+        with open('./datasets/reduced_data/sets/train_images.pkl', 'wb') as f:
             pickle.dump(train_set_images, f)
             
-        with open('./datsets/reduced_data/sets/val_images.pkl', 'wb') as f:
+        with open('./datasets/reduced_data/sets/val_images.pkl', 'wb') as f:
             pickle.dump(val_set_images, f)
                            
-        with open('./datsets/reduced_data/sets/test_images.pkl', 'wb') as f:
+        with open('./datasets/reduced_data/sets/test_images.pkl', 'wb') as f:
             pickle.dump(test_set_images, f)
                            
-        with open('./datsets/reduced_data/sets/train_labels.pkl', 'wb') as f:
+        with open('./datasets/reduced_data/sets/train_labels.pkl', 'wb') as f:
             pickle.dump(train_set_labels, f)
             
-        with open('./datsets/reduced_data/sets/val_labels.pkl', 'wb') as f:
+        with open('./datasets/reduced_data/sets/val_labels.pkl', 'wb') as f:
             pickle.dump(val_set_labels, f)
             
-        with open('./datsets/reduced_data/sets/test_labels.pkl', 'wb') as f:
+        with open('./datasets/reduced_data/sets/test_labels.pkl', 'wb') as f:
             pickle.dump(test_set_labels, f)
             
-        with open('./datsets/reduced_data/sets/train_info.pkl', 'wb') as f:
+        with open('./datasets/reduced_data/sets/train_info.pkl', 'wb') as f:
             pickle.dump(train_set_info, f)
             
-        with open('./datsets/reduced_data/sets/val_info.pkl', 'wb') as f:
+        with open('./datasets/reduced_data/sets/val_info.pkl', 'wb') as f:
             pickle.dump(val_set_info, f)
             
-        with open('./datsets/reduced_data/sets/test_info.pkl', 'wb') as f:
+        with open('./datasets/reduced_data/sets/test_info.pkl', 'wb') as f:
             pickle.dump(test_set_info, f)
                 
     def load_data(self):
