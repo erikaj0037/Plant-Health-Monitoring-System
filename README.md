@@ -3,3 +3,6 @@
 
 ## Dataset
 Acquired [here](https://entrepot.recherche.data.gouv.fr/dataset.xhtml;jsessionid=f6d797791e07c5383fbffcdb2790?persistentId=doi%3A10.57745%2FR6AMN3&version=&q=&fileTypeGroupFacet=&fileAccess=&fileSortField=name&fileSortOrder=desc)
+
+## Description
+Hyperspectral images can encode significantly more information in a single image compared to RGB images. Given more complex data, the nonlinear relationships extracted by deep learning models can span a wide range of the light spectrum. To investigate the application of deep learning to hyperspectral imaging (HSI) data, an unsupervised deep learning model is under production for the semantic segmentation of hyperspectral images of plant data and the detection of anomalies to assess the health of the plants. The 3D stacked convolutional autoencoder, W-Net, is trained on hyperspectral images of apple tree leaves infected with fire blight to identify abnormalities in their state of health. Due to the high dimensionality of the data, dimensionality reduction facilitated by the Uniform Manifold Approximation and Projection (UMAP) algorithm compresses the images and uncovers high-level features. Moreover, HSI data is time-consuming and expensive to label, so an unsupervised learning method is applied to cluster patterns for segmentation and anomaly detection.
