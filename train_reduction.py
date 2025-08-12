@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 # import torcharrow as ta
-# from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 # import seaborn as sns
 # import pandas as pd
 
@@ -17,11 +17,12 @@ import torch
 # from pathlib import Path
 import sys
 from networks.wnet_model import WNet3D
-# from data_fireblight import Loader
-# from torch.utils.data import Dataset 
+from load_data import Loader
+from torch.utils.data import Dataset 
 from torch.utils.data import DataLoader
 from torchsummary import summary
 
+writer = SummaryWriter()
 # from format_segmentations import histogram, anomaly_histogram, find_anomalies, color_code_segmentations, color_code_anomalies
 
 # class AverageMeter(object):
@@ -54,69 +55,70 @@ from torchsummary import summary
 # #     return acc
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer: torch.optim.Optimizer, scheduler: torch.optim.lr_scheduler.LRScheduler, criterion: nn.modules.loss._Loss, data_max: float, metadata = dict):
+def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer: torch.optim.Optimizer, scheduler: torch.optim.lr_scheduler.LRScheduler, criterion: nn.modules.loss._Loss, metadata = dict):
     
-#     iter_time = AverageMeter()
-#     losses = AverageMeter()
-#     acc = AverageMeter()
-#     print("Training...")
-#     loss = None
-#     iters = len(data_loader_train)
-#     for idx, (data, labels, info) in enumerate(data_loader_train): 
-#         start = time.time()
-#         if torch.cuda.is_available():
-#             data = data.cuda()
-# #             target = target.cuda()
-# #         data = torch.transpose(data, 2, 4)
-# #         data = torch.transpose(data, 3, 4)#.float().cuda()
-#         data = torch.unsqueeze(data, dim = 1)
-#         optimizer.zero_grad()
-#         _, out = model(data)
-#         loss = criterion(out, data)
-#         loss = torch.mean(loss)
-# #         writer.add_scalar("Loss/train", loss)
-#         loss.backward()
+    iter_time = AverageMeter()
+    losses = AverageMeter()
+    acc = AverageMeter()
+    print("Training...")
+    loss = None
+    iters = len(data_loader_train)
+    for idx, (data, labels, info) in enumerate(data_loader_train): 
+        start = time.time()
+        if torch.cuda.is_available():
+            data = data.cuda()
+#             target = target.cuda()
+#         data = torch.transpose(data, 2, 4)
+#         data = torch.transpose(data, 3, 4)#.float().cuda()
+        data = torch.unsqueeze(data, dim = 1)
+        optimizer.zero_grad()
+        _, out = model(data)
+        loss = criterion(out, data)
+        loss = torch.mean(loss)
+#         writer.add_scalar("Loss/train", loss)
+        loss.backward()
    
-#         optimizer.step()
+        optimizer.step()
     
         
-# #         batch_acc = accuracy(out, target)
-#         losses.update(loss, out.shape[0])
-# #         acc.update(batch_acc, out.shape[0])
+#         batch_acc = accuracy(out, target)
+        losses.update(loss, out.shape[0])
+#         acc.update(batch_acc, out.shape[0])
 
-#         iter_time.update(time.time() - start)
-#         if idx % 50 == 0:
-#             print(('Epoch: [{0}][{1}/{2}]\t'
-#                    'Time {iter_time.val:.3f} ({iter_time.avg:.3f})\t'
-#                    'Loss {loss.val:.4E} ({loss.avg:.4E})\t'
-#                    'LR ({lr:.4E})\t')
-# #                    'Prec @1 {top1.val:.4f} ({top1.avg:.4f})\t')
-#                    .format(epoch, idx, len(data_loader_train), iter_time=iter_time, loss=losses, lr=scheduler.get_last_lr()[0]))#, top1=acc))
+        iter_time.update(time.time() - start)
+        if idx % 50 == 0:
+            print(('Epoch: [{0}][{1}/{2}]\t'
+                   'Time {iter_time.val:.3f} ({iter_time.avg:.3f})\t'
+                   'Loss {loss.val:.4E} ({loss.avg:.4E})\t'
+                   'LR ({lr:.4E})\t')
+#                    'Prec @1 {top1.val:.4f} ({top1.avg:.4f})\t')
+                   .format(epoch, idx, len(data_loader_train), iter_time=iter_time, loss=losses, lr=scheduler.get_last_lr()[0]))#, top1=acc))
             
-#         if idx % 100 == 0:
-#             image_target = data[0][0] * data_max
-#             image_target = image_target.transpose(0,2)
-#             image_target = image_target.transpose(0,1)
-#             image_model = out[0][0]*data_max
-#             image_model = image_model.transpose(0,2)
-#             image_model = image_model.transpose(0,1)
+        writer.add_scalar("Index vs Loss", loss, idx)  
+        # if idx % 100 == 0:
+        #     image_target = data[0][0] * data_max
+        #     image_target = image_target.transpose(0,2)
+        #     image_target = image_target.transpose(0,1)
+        #     image_model = out[0][0]*data_max
+        #     image_model = image_model.transpose(0,2)
+        #     image_model = image_model.transpose(0,1)
             
             
-# #             envi.save_image("images/training/header_files/epoch_" + str(epoch) + "target.hdr", image_target.detach().cpu().numpy(), metadata = metadata, force = True)
-# #             envi.save_image("images/training/header_files/epoch_" + str(epoch) + "model.hdr", image_model.detach().cpu().numpy(), metadata = metadata, force = True)
+#             envi.save_image("images/training/header_files/epoch_" + str(epoch) + "target.hdr", image_target.detach().cpu().numpy(), metadata = metadata, force = True)
+#             envi.save_image("images/training/header_files/epoch_" + str(epoch) + "model.hdr", image_model.detach().cpu().numpy(), metadata = metadata, force = True)
             
-# #             header_file_target = Path(r"images/training/header_files/epoch_" + str(epoch) + "target.hdr")
-# #             header_file_model = Path(r"images/training/header_files/epoch_" + str(epoch) + "model.hdr")
-# #             image_target = envi.open(header_file_target)
-# #             image_model = envi.open(header_file_model)
+#             header_file_target = Path(r"images/training/header_files/epoch_" + str(epoch) + "target.hdr")
+#             header_file_model = Path(r"images/training/header_files/epoch_" + str(epoch) + "model.hdr")
+#             image_target = envi.open(header_file_target)
+#             image_model = envi.open(header_file_model)
             
-# #             save_rgb("images/training/model_in_out/epoch" + str(epoch) + "_index" + str(idx) + "_target.png", image_target)
-# #             save_rgb("images/training/model_in_out/epoch" + str(epoch) + "_index" + str(idx) + "_model.png", image_model)
-#             save_images(image_target, metadata, k, "training", "original", "original", idx, epoch)
-#             save_images(image_model, metadata, k, "training", "reconstruction", "model", idx, epoch)
+#             save_rgb("images/training/model_in_out/epoch" + str(epoch) + "_index" + str(idx) + "_target.png", image_target)
+#             save_rgb("images/training/model_in_out/epoch" + str(epoch) + "_index" + str(idx) + "_model.png", image_model)
+            # save_images(image_target, metadata, k, "training", "original", "original", idx, epoch)
+            # save_images(image_model, metadata, k, "training", "reconstruction", "model", idx, epoch)
         
-#         scheduler.step()
-#     return loss
+        scheduler.step()
+    return loss
                 
 # def validate(epoch: int, k: int, data_loader_val: DataLoader, model: nn.Module, criterion: nn.modules.loss._Loss, data_max: float, metadata = dict):
 #     print("Validating...")
@@ -273,42 +275,41 @@ from torchsummary import summary
 def load(batch_size):
     loader = Loader()
     data_train, data_val, data_test, metadata = loader.load_data()
-    train_dataloader = DataLoader(data_train, batch_size=2, shuffle=False)
-    val_dataloader = DataLoader(data_val, batch_size=2, shuffle=False) 
-    test_dataloader = DataLoader(data_test, batch_size=2, shuffle=False) 
-    return data_train, data_val, data_test, metadata
+    train_dataloader = DataLoader(data_train, batch_size=batch_size, shuffle=False)
+    val_dataloader = DataLoader(data_val, batch_size=batch_size, shuffle=False) 
+    test_dataloader = DataLoader(data_test, batch_size=batch_size, shuffle=False) 
+    return train_dataloader, val_dataloader, test_dataloader, metadata
 
 def run_model():
-# def run_model(data_train, data_val, data_test, max_factor, metadata, train = False):
-#     train_dataloader = DataLoader(data_train, batch_size=2, shuffle=False)
-#     val_dataloader = DataLoader(data_val, batch_size=2, shuffle=False) 
-#     test_dataloader = DataLoader(data_test, batch_size=2, shuffle=False) 
-# #     train_dataloader, val_dataloader, test_dataloader, metadata, max_factor = load_and_scale()
-#     k = 7
-#     model = WNet3D(k)
-#     model = WNet3D_trial()
-    load
+    train_dataloader, val_dataloader, test_dataloader, metadata = load(batch_size = 1)
+
     model = WNet3D()
     print("summary")
     if torch.cuda.is_available():
         model = model.cuda()
     print(summary(model, (1, 10, 512, 512)))
     
-    # criterion = nn.MSELoss(reduction = 'none')
+    k = 7 # number of labels of data for semantic segmentation
+
+    criterion = nn.MSELoss(reduction = 'none')
     
-# #     optimizer = torch.optim.SGD(model.parameters(), lr = 1e-4,
-# #                                 momentum=0.99,
-# #                                 weight_decay=1e-4)
+#     optimizer = torch.optim.SGD(model.parameters(), lr = 1e-4,
+#                                 momentum=0.99,
+#                                 weight_decay=1e-4)
    
     
     
-#     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-5)
-# #     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience = 200)
-#     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0 = 768, T_mult=1, eta_min=1e-8)
-#     epochs = 10
-# #     writer = SummaryWriter()
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-5)
+#     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience = 200)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0 = 768, T_mult=1, eta_min=1e-8)
+    epochs = 10
 
-#     if train:
+    for epoch in range(epochs):
+        train_loss = train(epoch, train_dataloader, model, optimizer, scheduler, criterion, max_factor, metadata)
+
+
+
+        
 #         ##training
 #         print("training model...")
 #         loss_list_train = []
@@ -316,7 +317,7 @@ def run_model():
 #         match_list = []
 #         for epoch in range(epochs):
 
-#             train_loss = train(epoch, train_dataloader, model, optimizer, scheduler, criterion, max_factor, metadata)
+            # train_loss = train(epoch, train_dataloader, model, optimizer, scheduler, criterion, max_factor, metadata)
 #             loss_list_train.append(float(train_loss.cpu().detach().numpy().astype(float)))
             
 # #             print(loss_list_train)

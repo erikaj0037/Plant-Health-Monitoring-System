@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 class UNet3D(nn.Module):
     
-    def __init__(self):
+    def __init__(self, k):
         super(UNet3D, self).__init__()
         self.unet_encoder1 = nn.Sequential(
             nn.Conv3d(1, 32, 3, padding = 'same'), 
