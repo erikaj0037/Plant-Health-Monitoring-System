@@ -203,7 +203,7 @@ class Loader():
         val_set_info = []
         test_set_info = []
         
-        path = Path(r'./datasets/reduced_data/')
+        path = Path(r'./datasets/apple_fireblight/')
         for month_folder in sorted(path.iterdir()):
             if month_folder.name[0] == ".":
                     continue
@@ -323,54 +323,42 @@ class Loader():
     def load_data(self):
         n_neighbors = 20
         n_components = 10
-        self.gather_data(n_neighbors, n_components)
+        # self.gather_data(n_neighbors, n_components)
         # self.split_data(n_components)
         # 
-#         print("loading datasets...")
-#         data_train = None
-#         data_val = None
-#         data_test = None
+        print("loading datasets...")
+        data_train = None
+        data_val = None
+        data_test = None
         
-#         with open('./datsets/reduced_data/sets/train_images.pkl', 'rb') as f:
-# #             train_set_images = pickle.load(f)
+        with open('./datasets/reduced_data/sets/train_images.pkl', 'rb') as f:
             
-            
-#             with open('./datsets/reduced_data/sets/train_labels.pkl', 'rb') as g:
-# #                 train_set_labels = pickle.load(f)
+            with open('./datasets/reduced_data/sets/train_labels.pkl', 'rb') as g:
 
-#                 with open('./datsets/reduced_data/sets/sets/train_info.pkl', 'rb') as h:
-# #                 train_set_labels = pickle.load(f)
+                with open('./datasets/reduced_data/sets/sets/train_info.pkl', 'rb') as h:
             
-#                     data_train = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
-#                     print("training images, labels, & info loaded")
+                    data_train = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
+                    print("training images, labels, & info loaded")
         
-#         with open('./datsets/reduced_data/sets/val_images.pkl', 'rb') as f:
-# #             train_set_images = pickle.load(f)
+        with open('./datasets/reduced_data/sets/val_images.pkl', 'rb') as f:
             
-            
-#             with open('./datsets/reduced_data/sets/val_labels.pkl', 'rb') as g:
-# #                 train_set_labels = pickle.load(f)
+            with open('./datasets/reduced_data/sets/val_labels.pkl', 'rb') as g:
 
-#                 with open('./datsets/reduced_data/sets/sets/val_info.pkl', 'rb') as h:
-# #                 train_set_labels = pickle.load(f)
+                with open('./datasets/reduced_data/sets/sets/val_info.pkl', 'rb') as h:
             
-#                     data_val = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
-#                     print("validation images, labels, & info loaded")
+                    data_val = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
+                    print("validation images, labels, & info loaded")
        
-#         with open('./datsets/reduced_data/sets/test_images.pkl', 'rb') as f:
-# #             train_set_images = pickle.load(f)
+        with open('./datasets/reduced_data/sets/test_images.pkl', 'rb') as f:
             
-            
-#             with open('./datsets/reduced_data/sets/test_labels.pkl', 'rb') as g:
-# #                 train_set_labels = pickle.load(f)
+            with open('./datasets/reduced_data/sets/test_labels.pkl', 'rb') as g:
 
-#                 with open('./datsets/reduced_data/sets/sets/test_info.pkl', 'rb') as h:
-# #                 train_set_labels = pickle.load(f)
+                with open('./datasets/reduced_data/sets/sets/test_info.pkl', 'rb') as h:
             
-#                     data_test = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
-#                     print("test images, labels, & info loaded")
+                    data_test = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
+                    print("test images, labels, & info loaded")
                 
-#         return data_train, data_val, data_test, self.metadata
+        return data_train, data_val, data_test, self.metadata
 
 
 def main():

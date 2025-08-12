@@ -19,7 +19,7 @@ import sys
 from networks.wnet_model import WNet3D
 # from data_fireblight import Loader
 # from torch.utils.data import Dataset 
-# from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader
 from torchsummary import summary
 
 # from format_segmentations import histogram, anomaly_histogram, find_anomalies, color_code_segmentations, color_code_anomalies
@@ -270,13 +270,13 @@ from torchsummary import summary
         
 #     return data_train, data_val, data_test, max_factor
 
-# def load_and_scale():
-#     loader = Loader()
-#     data_train, data_val, data_test, metadata = loader.load_data()
-#     print("scaling data...")
-#     data_train, data_val, data_test, max_factor = scale_data(data_train, data_val, data_test)
-
-#     return data_train, data_val, data_test, max_factor, metadata
+def load(batch_size):
+    loader = Loader()
+    data_train, data_val, data_test, metadata = loader.load_data()
+    train_dataloader = DataLoader(data_train, batch_size=2, shuffle=False)
+    val_dataloader = DataLoader(data_val, batch_size=2, shuffle=False) 
+    test_dataloader = DataLoader(data_test, batch_size=2, shuffle=False) 
+    return data_train, data_val, data_test, metadata
 
 def run_model():
 # def run_model(data_train, data_val, data_test, max_factor, metadata, train = False):
@@ -287,6 +287,7 @@ def run_model():
 #     k = 7
 #     model = WNet3D(k)
 #     model = WNet3D_trial()
+    load
     model = WNet3D()
     print("summary")
     if torch.cuda.is_available():
