@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 class WNet3D(nn.Module):
     
-    def __init__(self):
+    def __init__(self, k):
         super(WNet3D, self).__init__()
         self.unet_encoder1 = nn.Sequential(
             nn.Conv3d(1, 32, 3, padding = 'same'), 
@@ -78,14 +78,19 @@ class WNet3D(nn.Module):
         )
         
         self.unet1_out = nn.Sequential(
-            nn.Conv3d(32, 1, 1),
+            nn.Conv3d(32, k, 1),
 #             nn.BatchNorm3d(1),
             nn.ReLU(),
             # nn.Flatten(1,2),
             # nn.Conv2d(12, self.k, 1),
 #             nn.BatchNorm3d(1),
-            nn.Softmax(dim = 2)
-            
+            nn.Softmax(dim = 1)
+        )
+        self.post_unet1 = nn.Sequential(
+            nn.Conv3d(k, 32, 3, padding = 'same'), 
+            nn.ReLU(),
+            nn.Conv3d(32, 32, 3, padding = 'same'),
+            nn.ReLU()
         )
         
         self.unet2_out = nn.Sequential(
@@ -123,7 +128,8 @@ class WNet3D(nn.Module):
         
         output = self.unet1_out(x_decoded)
         
-        x_encoded1 = self.unet_encoder1(x)
+        # x_encoded1 = self.unet_encoder1(output)
+        x_encoded1 = self.post_unet1(output)
         x_pool = self.pool(x_encoded1)
         
         x_encoded2 = self.unet_encoder2(x_pool)

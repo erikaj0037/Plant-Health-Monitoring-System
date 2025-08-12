@@ -281,31 +281,30 @@ def load(batch_size):
     return train_dataloader, val_dataloader, test_dataloader, metadata
 
 def run_model():
-    train_dataloader, val_dataloader, test_dataloader, metadata = load(batch_size = 1)
+    # train_dataloader, val_dataloader, test_dataloader, metadata = load(batch_size = 1)
 
-    model = WNet3D()
+    k = 7 # number of labels of data for semantic segmentation
+    model = WNet3D(k)
     print("summary")
     if torch.cuda.is_available():
         model = model.cuda()
     print(summary(model, (1, 10, 512, 512)))
-    
-    k = 7 # number of labels of data for semantic segmentation
 
-    criterion = nn.MSELoss(reduction = 'none')
+#     criterion = nn.MSELoss(reduction = 'none')
     
-#     optimizer = torch.optim.SGD(model.parameters(), lr = 1e-4,
-#                                 momentum=0.99,
-#                                 weight_decay=1e-4)
+# #     optimizer = torch.optim.SGD(model.parameters(), lr = 1e-4,
+# #                                 momentum=0.99,
+# #                                 weight_decay=1e-4)
    
     
     
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-5)
-#     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience = 200)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0 = 768, T_mult=1, eta_min=1e-8)
-    epochs = 10
+#     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-5)
+# #     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience = 200)
+#     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0 = 768, T_mult=1, eta_min=1e-8)
+#     epochs = 10
 
-    for epoch in range(epochs):
-        train_loss = train(epoch, train_dataloader, model, optimizer, scheduler, criterion, max_factor, metadata)
+#     for epoch in range(epochs):
+#         train_loss = train(epoch, train_dataloader, model, optimizer, scheduler, criterion, max_factor, metadata)
 
 
 
