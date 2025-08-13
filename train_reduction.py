@@ -275,7 +275,12 @@ def custom_collate_fn(batch):
         images, labels, info = zip(*batch)
 
         # Pad labels and ascii form of info to the maximum length in the current batch
-        labels_padded = pad_sequence(labels, batch_first=True, padding_value=0)
+        labels_padded = pad_sequence(labels, batch_first=True, padding_value=0) #padded twice to pad both dimensions
+        temp = torch.transpose(labels_padded, 1, 2)
+        temp_padded = pad_sequence(temp, batch_first=True, padding_value=0) 
+        labels_padded = torch.transpose(temp_padded, 1, 2)
+        print(labels_padded.shape)
+
         info_padded = pad_sequence(info, batch_first=True, padding_value=0)
 
         # Stack images

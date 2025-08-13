@@ -21,6 +21,7 @@ import torch
 # import torch.nn as nn
 # import torch.nn.functional as F
 from torch.utils.data import Dataset 
+from torch.nn.utils.rnn import pad_sequence
 # from torch.utils.data import DataLoader
 
 # import pycuda.autoinit
@@ -44,13 +45,15 @@ class dataset(Dataset):
         image = torch.transpose(image, 0, 2) #(D, W, H)
         image = torch.transpose(image, 1, 2) #(D, H, W); ordering necessary for network
 
-        labels = torch.tensor(self.labels)
-        labels = labels[index]
+        labels = torch.tensor(self.labels[index])
 
-        info = self.info[index]
-        info = self.string_to_ascii(info)
+        info = [torch.tensor(item) for item in self.info[index]]
+        info = tuple(self.string_to_ascii(info))
+        # info = torch.unsqueeze(info, dim = 2)
+        info = torch.squeeze(pad_sequence(torch.unsqueeze(pad_sequence(info, batch_first=True, padding_value=0), dim=2), batch_first=True, padding_value=0))
         info = torch.tensor(info)
         
+
         return image, labels, info
     
     def string_to_ascii(self, string_list):
