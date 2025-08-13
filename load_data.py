@@ -47,11 +47,10 @@ class dataset(Dataset):
 
         labels = torch.tensor(self.labels[index])
 
-        info = [torch.tensor(item) for item in self.info[index]]
-        info = tuple(self.string_to_ascii(info))
-        # info = torch.unsqueeze(info, dim = 2)
+        info =  self.info[index]
+        info_ascii = self.string_to_ascii(info)
+        info = tuple([torch.tensor(item) for item in info_ascii])
         info = torch.squeeze(pad_sequence(torch.unsqueeze(pad_sequence(info, batch_first=True, padding_value=0), dim=2), batch_first=True, padding_value=0))
-        info = torch.tensor(info)
         
 
         return image, labels, info

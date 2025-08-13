@@ -7,6 +7,7 @@ from pathlib import Path
 import cv2
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils.rnn import pad_sequence
 import torch
 
 # images = None
@@ -39,11 +40,18 @@ import torch
 # rgb_img[label_list[:,0],label_list[:,1]] = np.array([255,0,0])
 # save_rgb('rgb0_labeled.jpg', rgb_img)
 
-x = torch.randn((2, 7, 5, 4, 4))
-x = torch.flatten(x, 1, 2)
-softmax = nn.Softmax(dim = 1)
-out = softmax(x)
-x_labeled = torch.argmax(out, dim = 1)
-print(x_labeled.shape)
-print(x_labeled)
+# x = torch.randn((2, 7, 5, 4, 4))
+# x = torch.flatten(x, 1, 2)
+# softmax = nn.Softmax(dim = 1)
+# out = softmax(x)
+# x_labeled = torch.argmax(out, dim = 1)
+# print(x_labeled.shape)
+# print(x_labeled)
 
+labels = tuple([torch.tensor([[0,0]]), torch.tensor([[4,3],[7,2]]), torch.tensor([0]), torch.tensor([[4,3],[7,2], [0,0]])])
+labels_padded = pad_sequence(labels, batch_first=True, padding_value=0) #padded twice to pad both dimensions
+print(labels_padded)
+# temp = torch.transpose(labels_padded, 1, 2)
+# temp_padded = pad_sequence(temp, batch_first=True, padding_value=0) 
+# labels_padded = torch.transpose(temp_padded, 1, 2)
+# print(labels_padded)

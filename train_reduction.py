@@ -275,13 +275,19 @@ def custom_collate_fn(batch):
         images, labels, info = zip(*batch)
 
         # Pad labels and ascii form of info to the maximum length in the current batch
+        # print(labels)
+        # for i in range(len(labels):
+        #     if len(labels[i]) == 1:
+        #         torch.nn.functional.pad(labels[i], (0, 1), mode='constant', value=0)
+        if len(labels[0]) == 1:
+            labels = list(labels)
+            labels[0] = torch.tensor([[0,0]])
+            labels = tuple(labels)
         labels_padded = pad_sequence(labels, batch_first=True, padding_value=0) #padded twice to pad both dimensions
-        temp = torch.transpose(labels_padded, 1, 2)
-        temp_padded = pad_sequence(temp, batch_first=True, padding_value=0) 
-        labels_padded = torch.transpose(temp_padded, 1, 2)
-        print(labels_padded.shape)
-
-        info_padded = pad_sequence(info, batch_first=True, padding_value=0)
+        
+        info = (torch.transpose(item, 0, 1) for item in info)
+        info_padded = pad_sequence(info, batch_first=True, padding_value=0) 
+        info_padded = torch.transpose(info_padded, 1, 2)
 
         # Stack images
         images_stacked = torch.stack(images)
@@ -297,7 +303,7 @@ def load(batch_size):
     return train_dataloader, val_dataloader, test_dataloader, metadata, umap_parameters
 
 def run_model():
-    batch_size = 8
+    batch_size = 2
     train_dataloader, val_dataloader, test_dataloader, metadata, umap_parameters = load(batch_size)
 
     k = 7 # number of labels of data for semantic segmentation
@@ -316,6 +322,7 @@ def run_model():
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-5)
 #     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience = 200)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0 = 768, T_mult=1, eta_min=1e-8)
+
     epochs = 10
     for epoch in range(epochs):
         train_loss = train(epoch, train_dataloader, model, optimizer, scheduler, criterion, metadata)
