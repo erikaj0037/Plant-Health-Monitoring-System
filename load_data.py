@@ -34,31 +34,32 @@ class dataset(Dataset):
         self.images = images
         self.labels = labels
         self.info = info
-        
-#         print(type(self.images))
-#         print(type(self.labels))
-#         print(type(self.images[0]))
-#         print(type(self.labels[0][:3]))
-#         print(type(self.labels[0][3:]))
   
     def __len__(self): 
         return len(self.images) 
   
     def __getitem__(self, index): 
-        image = torch.tensor(self.images[index])
-        image = torch.transpose(image, 0, 2)
-        image = torch.transpose(image, 1, 2)
-        labels = self.labels[index]
+        image = torch.tensor(self.images[index]).float()
+        #image dimensions (H, W, D)
+        image = torch.transpose(image, 0, 2) #(D, W, H)
+        image = torch.transpose(image, 1, 2) #(D, H, W); ordering necessary for network
+
+        labels = torch.tensor(self.labels)
+        labels = labels[index]
+
         info = self.info[index]
+        info = self.string_to_ascii(info)
+        info = torch.tensor(info)
+        
         return image, labels, info
     
     def string_to_ascii(self, string_list):
         ascii_list = []
         for string in string_list:
             ascii_list.append([ord(char) for char in string])
-        ascii_padded = self.pad_ascii(ascii_list)
+        # ascii_padded = self.pad_ascii(ascii_list)
         
-        return ascii_padded
+        return ascii_list
     
     def pad_ascii(self, ascii_list):
         max_str_len = 14
@@ -335,7 +336,7 @@ class Loader():
             
             with open('./datasets/reduced_data/sets/train_labels.pkl', 'rb') as g:
 
-                with open('./datasets/reduced_data/sets/sets/train_info.pkl', 'rb') as h:
+                with open('./datasets/reduced_data/sets/train_info.pkl', 'rb') as h:
             
                     data_train = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
                     print("training images, labels, & info loaded")
@@ -344,7 +345,7 @@ class Loader():
             
             with open('./datasets/reduced_data/sets/val_labels.pkl', 'rb') as g:
 
-                with open('./datasets/reduced_data/sets/sets/val_info.pkl', 'rb') as h:
+                with open('./datasets/reduced_data/sets/val_info.pkl', 'rb') as h:
             
                     data_val = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
                     print("validation images, labels, & info loaded")
@@ -353,12 +354,12 @@ class Loader():
             
             with open('./datasets/reduced_data/sets/test_labels.pkl', 'rb') as g:
 
-                with open('./datasets/reduced_data/sets/sets/test_info.pkl', 'rb') as h:
+                with open('./datasets/reduced_data/sets/test_info.pkl', 'rb') as h:
             
                     data_test = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
                     print("test images, labels, & info loaded")
                 
-        return data_train, data_val, data_test, self.metadata
+        return data_train, data_val, data_test, self.metadata, [n_neighbors, n_components]
 
 
 def main():

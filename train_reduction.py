@@ -20,27 +20,28 @@ from networks.wnet_model import WNet3D
 from load_data import Loader
 from torch.utils.data import Dataset 
 from torch.utils.data import DataLoader
+from torch.nn.utils.rnn import pad_sequence
 from torchsummary import summary
 
 writer = SummaryWriter()
 # from format_segmentations import histogram, anomaly_histogram, find_anomalies, color_code_segmentations, color_code_anomalies
 
-# class AverageMeter(object):
-#     """Computes and stores the average and current value"""
-#     def __init__(self):
-#         self.reset()
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+    def __init__(self):
+        self.reset()
 
-#     def reset(self):
-#         self.val = 0
-#         self.avg = 0
-#         self.sum = 0
-#         self.count = 0
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
 
-#     def update(self, val, n=1):
-#         self.val = val
-#         self.sum += val * n
-#         self.count += n
-#         self.avg = self.sum / self.count
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
 
 # # def accuracy(output, target):
 # #     """Computes the precision@k for the specified values of k"""
@@ -53,7 +54,7 @@ writer = SummaryWriter()
 # #     acc = correct.item() / batch_size
 
 # #     return acc
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu"
 
 def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer: torch.optim.Optimizer, scheduler: torch.optim.lr_scheduler.LRScheduler, criterion: nn.modules.loss._Loss, metadata = dict):
     
@@ -72,20 +73,20 @@ def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer
 #         data = torch.transpose(data, 3, 4)#.float().cuda()
         data = torch.unsqueeze(data, dim = 1)
         optimizer.zero_grad()
-        _, out = model(data)
+        out = model(data)
         loss = criterion(out, data)
         loss = torch.mean(loss)
+        writer.add_scalar("Loss/Index", loss, idx) 
 #         writer.add_scalar("Loss/train", loss)
         loss.backward()
-   
         optimizer.step()
-    
-        
+
 #         batch_acc = accuracy(out, target)
         losses.update(loss, out.shape[0])
 #         acc.update(batch_acc, out.shape[0])
 
         iter_time.update(time.time() - start)
+   
         if idx % 50 == 0:
             print(('Epoch: [{0}][{1}/{2}]\t'
                    'Time {iter_time.val:.3f} ({iter_time.avg:.3f})\t'
@@ -93,8 +94,6 @@ def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer
                    'LR ({lr:.4E})\t')
 #                    'Prec @1 {top1.val:.4f} ({top1.avg:.4f})\t')
                    .format(epoch, idx, len(data_loader_train), iter_time=iter_time, loss=losses, lr=scheduler.get_last_lr()[0]))#, top1=acc))
-            
-        writer.add_scalar("Index vs Loss", loss, idx)  
         # if idx % 100 == 0:
         #     image_target = data[0][0] * data_max
         #     image_target = image_target.transpose(0,2)
@@ -271,42 +270,52 @@ def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer
 #     data_test.images = torch.divide(torch.from_numpy(np.array(data_test.images)), max_factor)
         
 #     return data_train, data_val, data_test, max_factor
+def custom_collate_fn(batch):
+        # batch is a list of (image, label, info) tuples
+        images, labels, info = zip(*batch)
+
+        # Pad labels and ascii form of info to the maximum length in the current batch
+        labels_padded = pad_sequence(labels, batch_first=True, padding_value=0)
+        info_padded = pad_sequence(info, batch_first=True, padding_value=0)
+
+        # Stack images
+        images_stacked = torch.stack(images)
+        
+        return images_stacked, labels_padded, info_padded
 
 def load(batch_size):
     loader = Loader()
-    data_train, data_val, data_test, metadata = loader.load_data()
-    train_dataloader = DataLoader(data_train, batch_size=batch_size, shuffle=False)
-    val_dataloader = DataLoader(data_val, batch_size=batch_size, shuffle=False) 
-    test_dataloader = DataLoader(data_test, batch_size=batch_size, shuffle=False) 
-    return train_dataloader, val_dataloader, test_dataloader, metadata
+    data_train, data_val, data_test, metadata, umap_parameters = loader.load_data()
+    train_dataloader = DataLoader(data_train, batch_size=batch_size, collate_fn=custom_collate_fn, drop_last=True, shuffle=False)
+    val_dataloader = DataLoader(data_val, batch_size=batch_size, collate_fn=custom_collate_fn, drop_last=True, shuffle=False) 
+    test_dataloader = DataLoader(data_test, batch_size=batch_size, collate_fn=custom_collate_fn, drop_last=True, shuffle=False) 
+    return train_dataloader, val_dataloader, test_dataloader, metadata, umap_parameters
 
 def run_model():
-    # train_dataloader, val_dataloader, test_dataloader, metadata = load(batch_size = 1)
+    batch_size = 8
+    train_dataloader, val_dataloader, test_dataloader, metadata, umap_parameters = load(batch_size)
 
     k = 7 # number of labels of data for semantic segmentation
-    model = WNet3D(k)
+    model = WNet3D(k).float()
     print("summary")
     if torch.cuda.is_available():
         model = model.cuda()
     print(summary(model, (1, 10, 512, 512)))
 
-#     criterion = nn.MSELoss(reduction = 'none')
+    criterion = nn.MSELoss(reduction = 'none')
     
-# #     optimizer = torch.optim.SGD(model.parameters(), lr = 1e-4,
-# #                                 momentum=0.99,
-# #                                 weight_decay=1e-4)
+#     optimizer = torch.optim.SGD(model.parameters(), lr = 1e-4,
+#                                 momentum=0.99,
+#                                 weight_decay=1e-4)
    
-    
-    
-#     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-5)
-# #     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience = 200)
-#     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0 = 768, T_mult=1, eta_min=1e-8)
-#     epochs = 10
-
-#     for epoch in range(epochs):
-#         train_loss = train(epoch, train_dataloader, model, optimizer, scheduler, criterion, max_factor, metadata)
-
-
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-5)
+#     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience = 200)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0 = 768, T_mult=1, eta_min=1e-8)
+    epochs = 10
+    for epoch in range(epochs):
+        train_loss = train(epoch, train_dataloader, model, optimizer, scheduler, criterion, metadata)
+    writer.close()
+    torch.save(model.state_dict(), "model_weights/model_batchsize" + str(batch_size) + "_k" + str(k) + "_umap[" + str(umap_parameters[0]) + "," + str(umap_parameters[1]) + "].pth")
 
         
 #         ##training
@@ -341,7 +350,7 @@ def run_model():
 #         loss_list_train_val = np.vstack((np.array(loss_list_train), np.array(loss_list_val)))
 #         plot_results('training_validation', epochs, list(loss_list_train_val), k)
 #     print("testing model...")
-#     model.load_state_dict(torch.load("checkpoints/train_model_k" + str(k) + ".pth", weights_only=True))
+    # model.load_state_dict(torch.load("checkpoints/train_model_k" + str(k) + ".pth", weights_only=True))
     
 #     print("model weights loaded")
 #     loss, anomaly_masks = test(k, test_dataloader, model, criterion, max_factor, metadata)
@@ -349,6 +358,7 @@ def run_model():
 #         np.save(f, np.array(anomaly_masks.cpu()))
     
 #     return loss
+    
 
 def main():
     run_model()

@@ -100,7 +100,7 @@ class WNet3D(nn.Module):
         )
         
     def forward(self, x):
-        x_encoded1 = self.unet_encoder1(x)
+        x_encoded1 = self.unet_encoder1(x.float())
         x_pool = self.pool(x_encoded1)
         
         x_encoded2 = self.unet_encoder2(x_pool)
