@@ -1,5 +1,6 @@
 import os
 import time
+import math
 import numpy as np
 import torch
 import torch.nn as nn
@@ -56,12 +57,11 @@ class AverageMeter(object):
 # #     return acc
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu"
 
-def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer: torch.optim.Optimizer, scheduler: torch.optim.lr_scheduler.LRScheduler, criterion: nn.modules.loss._Loss, metadata = dict):
+def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer: torch.optim.Optimizer, scheduler: torch.optim.lr_scheduler.LRScheduler, criterion: nn.modules.loss._Loss, metadata = dict, global_step = int):
     
     iter_time = AverageMeter()
     losses = AverageMeter()
     acc = AverageMeter()
-    print("Training...")
     loss = None
     iters = len(data_loader_train)
     for idx, (data, labels, info) in enumerate(data_loader_train): 
@@ -76,7 +76,9 @@ def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer
         out = model(data)
         loss = criterion(out, data)
         loss = torch.mean(loss)
-        writer.add_scalar("Loss/Index", loss, idx) 
+        writer.add_scalar("Training Loss/Index", loss, global_step = global_step) 
+        
+        # writer.add_scalar("Loss/Index", loss, idx) 
 #         writer.add_scalar("Loss/train", loss)
         loss.backward()
         optimizer.step()
@@ -86,8 +88,11 @@ def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer
 #         acc.update(batch_acc, out.shape[0])
 
         iter_time.update(time.time() - start)
-   
-        if idx % 50 == 0:
+
+        writer.add_scalar("LR/Index", scheduler.get_last_lr()[0], global_step = global_step) 
+        global_step += 1
+
+        if idx % 25 == 0:
             print(('Epoch: [{0}][{1}/{2}]\t'
                    'Time {iter_time.val:.3f} ({iter_time.avg:.3f})\t'
                    'Loss {loss.val:.4E} ({loss.avg:.4E})\t'
@@ -116,45 +121,50 @@ def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer
             # save_images(image_target, metadata, k, "training", "original", "original", idx, epoch)
             # save_images(image_model, metadata, k, "training", "reconstruction", "model", idx, epoch)
         
-        scheduler.step()
+        scheduler.step(loss.detach())
+    global_step_train = global_step
     return loss
                 
-# def validate(epoch: int, k: int, data_loader_val: DataLoader, model: nn.Module, criterion: nn.modules.loss._Loss, data_max: float, metadata = dict):
-#     print("Validating...")
-#     iter_time = AverageMeter()
-#     losses = AverageMeter()
-#     acc = AverageMeter()
+def validate(epoch: int, data_loader_val: DataLoader, model: nn.Module, criterion: nn.modules.loss._Loss, metadata = dict, global_step = int):
+    iter_time = AverageMeter()
+    losses = AverageMeter()
+    acc = AverageMeter()
 #     loss_reduced = None
 #     loss_mean = None
 #     loss_stddev = None
 #     loss_list = torch.tensor([]).to(device)
     
 #     label_list = torch.tensor([]).to(device)
-    
-#     for idx, (data, labels, info) in enumerate(data_loader_val): 
-#         start = time.time()
-#         if torch.cuda.is_available():
-#             data = data.to(device)
-#             labels = labels.to(device)
+    loss = None
+    for idx, (data, labels, info) in enumerate(data_loader_val): 
+        start = time.time()
+        if torch.cuda.is_available():
+            data = data.cuda()
+            # labels = labels.to(device)
 # #             target = target.cuda()
-#         data = torch.unsqueeze(data, dim = 1)
-#         with torch.no_grad():
-#             seg, out = model(data)
-#             loss = criterion(out, data)
+        data = torch.unsqueeze(data, dim = 1)
+        with torch.no_grad():
+            out = model(data)
+            # seg, out = model(data)
+            loss = criterion(out, data)
+            loss = torch.mean(loss)
+            writer.add_scalar("Validation Loss/Index", loss, global_step = global_step) 
+            global_step += 1
 #             loss_list = torch.cat((loss_list, loss), dim = 0)
 #             loss_reduced = torch.mean(loss)
 #             label_list = torch.cat((label_list, labels))
 # #         batch_acc = accuracy(out, target)
-#         losses.update(loss_reduced, out.shape[0])
+        losses.update(loss, out.shape[0])
 # #         acc.update(batch_acc, out.shape[0])
 
-#         iter_time.update(time.time() - start)
-#         if idx % 50 == 0:
-#             print(('Epoch: [{0}][{1}/{2}]\t'
-#                    'Time {iter_time.val:.3f} ({iter_time.avg:.3f})\t'
-#                    'Loss {loss.val:.4E} ({loss.avg:.4E})\t'
-#                       )
-#                    .format(epoch, idx, len(data_loader_val), iter_time=iter_time, loss=losses))#, top1=acc))
+        iter_time.update(time.time() - start)
+        if idx % 50 == 0:
+            print(('Epoch: [{0}][{1}/{2}]\t'
+                   'Time {iter_time.val:.3f} ({iter_time.avg:.3f})\t'
+                   'Loss {loss.val:.4E} ({loss.avg:.4E})\t'
+                      )
+                   .format(epoch, idx, len(data_loader_val), iter_time=iter_time, loss=losses))#, top1=acc))
+
 #         last_idx = 100    
 #         if idx % last_idx == 0:
 #             image_target = data[0][0] * data_max
@@ -163,7 +173,7 @@ def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer
 #             image_model = out[0][0]*data_max
 #             image_model = image_model.transpose(0,2)
 #             image_model = image_model.transpose(0,1)
-            
+    global_step_val = global_step
             
 # #             envi.save_image("images/validation/reconstruction/header_files/epoch_" + str(epoch) + "_k" + str(k) + "_target.hdr", image_target.detach().cpu().numpy(), metadata = metadata, force = True)
 # #             envi.save_image("images/validation/reconstruction/header_files/epoch_" + str(epoch) + "_k" + str(k) + "_model.hdr", image_model.detach().cpu().numpy(), metadata = metadata, force = True)
@@ -303,7 +313,7 @@ def load(batch_size):
     return train_dataloader, val_dataloader, test_dataloader, metadata, umap_parameters
 
 def run_model():
-    batch_size = 2
+    batch_size = 1
     train_dataloader, val_dataloader, test_dataloader, metadata, umap_parameters = load(batch_size)
 
     k = 7 # number of labels of data for semantic segmentation
@@ -315,19 +325,33 @@ def run_model():
 
     criterion = nn.MSELoss(reduction = 'none')
     
-#     optimizer = torch.optim.SGD(model.parameters(), lr = 1e-4,
-#                                 momentum=0.99,
-#                                 weight_decay=1e-4)
+    # optimizer = torch.optim.SGD(model.parameters(), lr = 1e-4,
+    #                             momentum=0.99,
+    #                             weight_decay=1e-4)
    
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-5)
-#     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience = 200)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0 = 768, T_mult=1, eta_min=1e-8)
-
+    # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
+    amplitude_step = 0
+    
+    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-3, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience = 2, factor = .01)
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0 = 15, T_mult=1, eta_min=1e-8)
+    print("Training and Validating Model...")
     epochs = 10
+    global_step_train = 0
+    global_step_val = 0
     for epoch in range(epochs):
-        train_loss = train(epoch, train_dataloader, model, optimizer, scheduler, criterion, metadata)
+        train_loss = train(epoch, train_dataloader, model, optimizer, scheduler, criterion, metadata, global_step_train)
+        validate(epoch, val_dataloader, model, criterion, metadata, global_step_val)
     writer.close()
-    torch.save(model.state_dict(), "model_weights/model_batchsize" + str(batch_size) + "_k" + str(k) + "_umap[" + str(umap_parameters[0]) + "," + str(umap_parameters[1]) + "].pth")
+
+    # b_path = "model_weights/batch_size_" + str(batch_size)
+    # k_path = "model_weights/batch_size_" + str(batch_size) + "/k_" + str(k)
+    # os.makedirs(b_path, exist_ok=True)
+    # os.makedirs(k_path, exist_ok=True)
+    torch.save(model.state_dict(), "backup_model.pth")
+    umap_path = "model_weights/batch_size" + str(batch_size) + "/k_" + str(k) + "/umap_" + str(umap_parameters[0]) + "_" + str(umap_parameters[1])
+    os.makedirs(umap_path, exist_ok=True)
+    torch.save(model.state_dict(), umap_path + "/model.pth")
 
         
 #         ##training

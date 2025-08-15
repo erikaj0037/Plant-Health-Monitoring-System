@@ -48,10 +48,13 @@ import torch
 # print(x_labeled.shape)
 # print(x_labeled)
 
-labels = tuple([torch.tensor([[0,0]]), torch.tensor([[4,3],[7,2]]), torch.tensor([0]), torch.tensor([[4,3],[7,2], [0,0]])])
-labels_padded = pad_sequence(labels, batch_first=True, padding_value=0) #padded twice to pad both dimensions
-print(labels_padded)
+# labels = tuple([torch.tensor([[0,0]]), torch.tensor([[4,3],[7,2]]), torch.tensor([0]), torch.tensor([[4,3],[7,2], [0,0]])])
+# labels_padded = pad_sequence(labels, batch_first=True, padding_value=0) #padded twice to pad both dimensions
+# print(labels_padded)
 # temp = torch.transpose(labels_padded, 1, 2)
 # temp_padded = pad_sequence(temp, batch_first=True, padding_value=0) 
 # labels_padded = torch.transpose(temp_padded, 1, 2)
 # print(labels_padded)
+
+x = np.array([[2, 3], [5,2]])
+y = np.array([[4, 4], [7,2], [9,0]])

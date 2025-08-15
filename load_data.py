@@ -102,13 +102,28 @@ class Loader():
 
         return reduced_img
         
-    def standardize(self, images):
-        print("standardizing data...")
-        images_mean = np.sum(images) / np.prod(images.shape)
-        images_std = np.std(images)
-        images_standardized = (images - images_mean) / images_std
+    # def standardize(self, images):
+    #     print("standardizing data...")
+    #     images_mean = np.sum(images) / np.prod(images.shape)
+    #     images_std = np.std(images)
+    #     images_standardized = (images - images_mean) / images_std
 
-        return images_standardized
+    #     return images_standardized
+    
+    def standardize(self, training_set, validation_set, test_set):
+        print("standardizing data...")
+        set = np.append(training_set, validation_set, axis = 0)
+        set = np.append(set, test_set, axis = 0)
+        set_mean = np.sum(set) / np.prod(set.shape)
+        set_std = np.std(set)
+        images_standardized = (set - set_mean) / set_std
+
+        i = len(training_set)
+        j = len(validation_set)
+        train_standardized = images_standardized[:i]
+        val_standardized = images_standardized[i:i+j]
+        test_standardized = images_standardized[i+j:]
+        return train_standardized, val_standardized, test_standardized
         
     def gather_data(self, n_neighbors, n_components):
         print("gathering data...")
@@ -235,7 +250,7 @@ class Loader():
             labels = [labels[i] for i in indices]
             info = [info[i] for i in indices]
 
-            images = self.standardize(images)
+            # images = self.standardize(images)
             
             test_thresh =int(np.floor(.8*len(images)))
             images_train_val = images[:test_thresh]
@@ -294,6 +309,8 @@ class Loader():
         test_set_images = test_set_images[i]
         test_set_labels = [test_set_labels[k] for k in i]
         test_set_info = [test_set_info[k] for k in i]
+
+        train_set_images, val_set_images, test_set_images = self.standardize(train_set_images, val_set_images, test_set_images)
         
         ###insert avg function
         with open('./datasets/reduced_data/sets/train_images.pkl', 'wb') as f:
@@ -335,7 +352,7 @@ class Loader():
         data_test = None
         
         with open('./datasets/reduced_data/sets/train_images.pkl', 'rb') as f:
-            
+
             with open('./datasets/reduced_data/sets/train_labels.pkl', 'rb') as g:
 
                 with open('./datasets/reduced_data/sets/train_info.pkl', 'rb') as h:
