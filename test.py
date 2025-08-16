@@ -58,3 +58,4 @@ import torch
 
 x = np.array([[2, 3], [5,2]])
 y = np.array([[4, 4], [7,2], [9,0]])
+print(np.sum(y))

@@ -18,6 +18,7 @@ from torch.utils.tensorboard import SummaryWriter
 # from pathlib import Path
 import sys
 from networks.wnet_model import WNet3D
+from networks.wnet_model_2D import WNet2D
 from load_data import Loader
 from torch.utils.data import Dataset 
 from torch.utils.data import DataLoader
@@ -75,13 +76,17 @@ def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer
         optimizer.zero_grad()
         out = model(data)
         loss = criterion(out, data)
-        loss = torch.mean(loss)
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+        # loss = torch.mean(loss)
+        
         writer.add_scalar("Training Loss/Index", loss, global_step = global_step) 
         
         # writer.add_scalar("Loss/Index", loss, idx) 
 #         writer.add_scalar("Loss/train", loss)
-        loss.backward()
-        optimizer.step()
+        
+        
 
 #         batch_acc = accuracy(out, target)
         losses.update(loss, out.shape[0])
@@ -121,9 +126,8 @@ def train(epoch: int, data_loader_train: DataLoader, model: nn.Module, optimizer
             # save_images(image_target, metadata, k, "training", "original", "original", idx, epoch)
             # save_images(image_model, metadata, k, "training", "reconstruction", "model", idx, epoch)
         
-        scheduler.step(loss.detach())
-    global_step_train = global_step
-    return loss
+        
+    return loss, global_step
                 
 def validate(epoch: int, data_loader_val: DataLoader, model: nn.Module, criterion: nn.modules.loss._Loss, metadata = dict, global_step = int):
     iter_time = AverageMeter()
@@ -173,7 +177,7 @@ def validate(epoch: int, data_loader_val: DataLoader, model: nn.Module, criterio
 #             image_model = out[0][0]*data_max
 #             image_model = image_model.transpose(0,2)
 #             image_model = image_model.transpose(0,1)
-    global_step_val = global_step
+    return global_step
             
 # #             envi.save_image("images/validation/reconstruction/header_files/epoch_" + str(epoch) + "_k" + str(k) + "_target.hdr", image_target.detach().cpu().numpy(), metadata = metadata, force = True)
 # #             envi.save_image("images/validation/reconstruction/header_files/epoch_" + str(epoch) + "_k" + str(k) + "_model.hdr", image_model.detach().cpu().numpy(), metadata = metadata, force = True)
@@ -314,44 +318,44 @@ def load(batch_size):
 
 def run_model():
     batch_size = 1
-    train_dataloader, val_dataloader, test_dataloader, metadata, umap_parameters = load(batch_size)
+    # train_dataloader, val_dataloader, test_dataloader, metadata, umap_parameters = load(batch_size)
 
     k = 7 # number of labels of data for semantic segmentation
-    model = WNet3D(k).float()
+    model = WNet2D(k).float()
     print("summary")
     if torch.cuda.is_available():
         model = model.cuda()
-    print(summary(model, (1, 10, 512, 512)))
+    print(summary(model, (204, 512, 512)))
 
-    criterion = nn.MSELoss(reduction = 'none')
+    # criterion = nn.MSELoss(reduction = 'mean')
     
-    # optimizer = torch.optim.SGD(model.parameters(), lr = 1e-4,
-    #                             momentum=0.99,
-    #                             weight_decay=1e-4)
+    # # optimizer = torch.optim.SGD(model.parameters(), lr = 1e-4,
+    # #                             momentum=0.99,
+    # #                             weight_decay=1e-4)
    
-    # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
-    amplitude_step = 0
+    # # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
+    # amplitude_step = 0
     
-    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-3, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience = 2, factor = .01)
+    # optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=1e-4)
+    # # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience = 1, factor = .01)
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0 = 15, T_mult=1, eta_min=1e-8)
-    print("Training and Validating Model...")
-    epochs = 10
-    global_step_train = 0
-    global_step_val = 0
-    for epoch in range(epochs):
-        train_loss = train(epoch, train_dataloader, model, optimizer, scheduler, criterion, metadata, global_step_train)
-        validate(epoch, val_dataloader, model, criterion, metadata, global_step_val)
-    writer.close()
+    # print("Training and Validating Model...")
+    # epochs = 10
+    # global_step_train = 0
+    # global_step_val = 0
+    # for epoch in range(epochs):
+    #     train_loss, global_step_train = train(epoch, train_dataloader, model, optimizer, scheduler, criterion, metadata, global_step_train)
+    #     global_step_val = validate(epoch, val_dataloader, model, criterion, metadata, global_step_val)
+    # writer.close()
 
-    # b_path = "model_weights/batch_size_" + str(batch_size)
-    # k_path = "model_weights/batch_size_" + str(batch_size) + "/k_" + str(k)
-    # os.makedirs(b_path, exist_ok=True)
-    # os.makedirs(k_path, exist_ok=True)
-    torch.save(model.state_dict(), "backup_model.pth")
-    umap_path = "model_weights/batch_size" + str(batch_size) + "/k_" + str(k) + "/umap_" + str(umap_parameters[0]) + "_" + str(umap_parameters[1])
-    os.makedirs(umap_path, exist_ok=True)
-    torch.save(model.state_dict(), umap_path + "/model.pth")
+    # # b_path = "model_weights/batch_size_" + str(batch_size)
+    # # k_path = "model_weights/batch_size_" + str(batch_size) + "/k_" + str(k)
+    # # os.makedirs(b_path, exist_ok=True)
+    # # os.makedirs(k_path, exist_ok=True)
+    # torch.save(model.state_dict(), "backup_model.pth")
+    # umap_path = "model_weights/batch_size" + str(batch_size) + "/k_" + str(k) + "/umap_" + str(umap_parameters[0]) + "_" + str(umap_parameters[1])
+    # os.makedirs(umap_path, exist_ok=True)
+    # torch.save(model.state_dict(), umap_path + "/model.pth")
 
         
 #         ##training

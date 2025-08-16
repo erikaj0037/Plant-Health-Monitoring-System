@@ -86,7 +86,6 @@ class Loader():
 
         self.wavelengths = self.metadata['wavelength']
         
-        
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def reduce(self, image, n_neighbors, n_components):
@@ -94,13 +93,13 @@ class Loader():
         reducer = umap.UMAP(n_neighbors = n_neighbors, n_components = n_components)
 
         image = image.reshape((np.prod(image.shape[:2]), image.shape[2]))
-        scaled_img = StandardScaler().fit_transform(image)
+        scaled_image = StandardScaler().fit_transform(image)
 
-        embedding = reducer.fit_transform(scaled_img)
+        embedding = reducer.fit_transform(scaled_image)
 
-        reduced_img = embedding.reshape((512,512,n_components))
+        reduced_image = embedding.reshape((512,512,n_components))
 
-        return reduced_img
+        return reduced_image
         
     # def standardize(self, images):
     #     print("standardizing data...")
@@ -124,12 +123,31 @@ class Loader():
         val_standardized = images_standardized[i:i+j]
         test_standardized = images_standardized[i+j:]
         return train_standardized, val_standardized, test_standardized
+    
+    def get_hsi(self, hdr_file, data_file):
+        image = envi.open(hdr_file, data_file)
+        channels = image.shape[-1]
+        c = np.arange(channels)
+        hsi = image.read_bands(c)
+        return hsi
+    
+    def save_image_set(self, image_array, set_number, month_folder, voxel_value_sum):
+        print("saving images...")
+        print("images list size: " + str(len(image_array)))
+        print("images memory size: " + str(sys.getsizeof(image_array) / 1000000000) + " GB")
+        with open('./datasets/raw_data/' + str(month_folder.name) + '/image_set' + str(set_number) + '.pkl', 'wb') as f:
+            images = images[1:]
+            voxel_value_sum += np.sum(images)
+            pickle.dump(images, f)
+            return voxel_value_sum
         
     def gather_data(self, n_neighbors, n_components):
         print("gathering data...")
  
         path = Path(r'./datasets/apple_fireblight')
-        
+        image_count = 0
+        image_set_count = 0
+        voxel_value_sum = 0
         for month_folder in sorted(path.iterdir()):
             if month_folder.name[0] == ".":
                     continue
@@ -137,9 +155,11 @@ class Loader():
                 continue
             
             print("month:", month_folder.name)
-            images = np.empty((1, 512, 512, n_components))
+            # images = np.empty((1, 512, 512, n_components))
+            images = np.empty((1, 512, 512, 204))
             labels = [] 
             info = []
+
             for day_folder in sorted(month_folder.iterdir()):
                 if day_folder.name[0] == ".":
                     continue
@@ -167,13 +187,16 @@ class Loader():
                     try:
                         if hdr_file and data_file:
 
-                            image = envi.open(hdr_file, data_file)
-                            channels = image.shape[-1]
-                            c = np.arange(channels)
-                            hsi = image.read_bands(c)
+                            self.get_hsi(hdr_file, data_file)
 
-                            reduced_img = self.reduce(hsi, n_neighbors, n_components)
-                            images = np.append(images, np.array([reduced_img]), axis = 0)
+                            image_count += 1
+                            # reduced_img = self.reduce(hsi, n_neighbors, n_components)
+                            images = np.append(images, np.array([hsi]), axis = 0)
+                            if sys.getsizeof(images) / 1000000000 >= 24:
+                                
+                                image_set_count += 1
+                                voxel_value_sum = self.save_image_set(images, image_set_count, month_folder, voxel_value_sum)
+                                images = np.empty((1, 512, 512, 204))
 
                             info.append([month_folder.name, day_folder.name, plant_folder.name])
 
@@ -187,24 +210,33 @@ class Loader():
                                 labels.append([0])
                     except:
                         continue
+            
+            
             print("saving images...")
             print("images list size: " + str(len(images)))
-            
             print("images memory size: " + str(sys.getsizeof(images) / 1000000000) + " GB")
-            with open('./datasets/reduced_data/' + str(month_folder.name) + '/images.pkl', 'wb') as f:
+            image_set_count += 1
+            with open('./datasets/raw_data/' + str(month_folder.name) + '/image_set' + str(image_set_count) + '.pkl', 'wb') as f:
                 images = images[1:]
+                vixel_value_sum += np.sum(images)
                 pickle.dump(images, f)
 
             print("saving labels...")
             print("labels list size: " + str(len(labels)))
             
             print("labels memory size: " + str(sys.getsizeof(labels) / 1000000000) + " GB")
-            with open('./datasets/reduced_data/' + str(month_folder.name) + '/labels.pkl', 'wb') as f:
+            with open('./datasets/raw_data/' + str(month_folder.name) + '/labels.pkl', 'wb') as f:
                 pickle.dump(labels, f)
 
             print("info list size: " + str(len(info)))
-            with open('./datasets/reduced_data/' + str(month_folder.name) + '/info.pkl', 'wb') as f:
+            with open('./datasets/raw_data/' + str(month_folder.name) + '/info.pkl', 'wb') as f:
                 pickle.dump(info, f)
+
+            total_voxels = image_count*512*512*204
+            voxel_value_mean = voxel_value_sum / total_voxels
+            return voxel_value_mean, total_voxels
+
+
            
     def split_data(self, n_components):
         print("splitting data...")
@@ -222,6 +254,7 @@ class Loader():
         test_set_info = []
         
         path = Path(r'./datasets/apple_fireblight/')
+        dataset_folder = "raw_data"
         for month_folder in sorted(path.iterdir()):
             if month_folder.name[0] == ".":
                     continue
@@ -229,13 +262,14 @@ class Loader():
             images = None
             labels = None
             info = None
-            with open('./datasets/reduced_data/' + str(month_folder.name) + '/images.pkl', 'rb') as f:
+            
+            with open('./datasets/' + dataset_folder + '/' + str(month_folder.name) + '/images.pkl', 'rb') as f:
                 images = pickle.load(f)
                 
-            with open('./datasets/reduced_data/' + str(month_folder.name) + '/labels.pkl', 'rb') as f:
+            with open('./datasets/' + dataset_folder + '/' + str(month_folder.name) + '/labels.pkl', 'rb') as f:
                 labels = pickle.load(f)
 
-            with open('./datasets/reduced_data/' + str(month_folder.name) + '/info.pkl', 'rb') as f:
+            with open('./datasets' + dataset_folder + '/' + str(month_folder.name) + '/info.pkl', 'rb') as f:
                 info = pickle.load(f)
             
             indices = np.arange(len(images))
@@ -313,72 +347,73 @@ class Loader():
         train_set_images, val_set_images, test_set_images = self.standardize(train_set_images, val_set_images, test_set_images)
         
         ###insert avg function
-        with open('./datasets/reduced_data/sets/train_images.pkl', 'wb') as f:
+        with open('./datasets/' + dataset_folder + '/sets/train_images.pkl', 'wb') as f:
             pickle.dump(train_set_images, f)
             
-        with open('./datasets/reduced_data/sets/val_images.pkl', 'wb') as f:
+        with open('./datasets/' + dataset_folder + '/sets/val_images.pkl', 'wb') as f:
             pickle.dump(val_set_images, f)
                            
-        with open('./datasets/reduced_data/sets/test_images.pkl', 'wb') as f:
+        with open('./datasets/' + dataset_folder + '/sets/test_images.pkl', 'wb') as f:
             pickle.dump(test_set_images, f)
                            
-        with open('./datasets/reduced_data/sets/train_labels.pkl', 'wb') as f:
+        with open('./datasets/' + dataset_folder + '/sets/train_labels.pkl', 'wb') as f:
             pickle.dump(train_set_labels, f)
             
-        with open('./datasets/reduced_data/sets/val_labels.pkl', 'wb') as f:
+        with open('./datasets/' + dataset_folder + '/sets/val_labels.pkl', 'wb') as f:
             pickle.dump(val_set_labels, f)
             
-        with open('./datasets/reduced_data/sets/test_labels.pkl', 'wb') as f:
+        with open('./datasets/' + dataset_folder + '/sets/test_labels.pkl', 'wb') as f:
             pickle.dump(test_set_labels, f)
             
-        with open('./datasets/reduced_data/sets/train_info.pkl', 'wb') as f:
+        with open('./datasets/' + dataset_folder + '/sets/train_info.pkl', 'wb') as f:
             pickle.dump(train_set_info, f)
             
-        with open('./datasets/reduced_data/sets/val_info.pkl', 'wb') as f:
+        with open('./datasets/' + dataset_folder + '/sets/val_info.pkl', 'wb') as f:
             pickle.dump(val_set_info, f)
             
-        with open('./datasets/reduced_data/sets/test_info.pkl', 'wb') as f:
+        with open('./datasets/' + dataset_folder + '/sets/test_info.pkl', 'wb') as f:
             pickle.dump(test_set_info, f)
                 
     def load_data(self):
         n_neighbors = 20
         n_components = 10
-        # self.gather_data(n_neighbors, n_components)
+        self.gather_data(n_neighbors, n_components)
+        dataset_folder = "raw_data"
         # self.split_data(n_components)
         # 
-        print("loading datasets...")
-        data_train = None
-        data_val = None
-        data_test = None
+        # print("loading datasets...")
+        # data_train = None
+        # data_val = None
+        # data_test = None
         
-        with open('./datasets/reduced_data/sets/train_images.pkl', 'rb') as f:
+        # with open('./datasets/' + dataset_folder + '/sets/train_images.pkl', 'rb') as f:
 
-            with open('./datasets/reduced_data/sets/train_labels.pkl', 'rb') as g:
+        #     with open('./datasets/' + dataset_folder + '/sets/train_labels.pkl', 'rb') as g:
 
-                with open('./datasets/reduced_data/sets/train_info.pkl', 'rb') as h:
+        #         with open('./datasets/' + dataset_folder + '/sets/train_info.pkl', 'rb') as h:
             
-                    data_train = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
-                    print("training images, labels, & info loaded")
+        #             data_train = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
+        #             print("training images, labels, & info loaded")
         
-        with open('./datasets/reduced_data/sets/val_images.pkl', 'rb') as f:
+        # with open('./datasets/' + dataset_folder + '/sets/val_images.pkl', 'rb') as f:
             
-            with open('./datasets/reduced_data/sets/val_labels.pkl', 'rb') as g:
+        #     with open('./datasets/' + dataset_folder + '/sets/val_labels.pkl', 'rb') as g:
 
-                with open('./datasets/reduced_data/sets/val_info.pkl', 'rb') as h:
+        #         with open('./datasets/' + dataset_folder + '/sets/val_info.pkl', 'rb') as h:
             
-                    data_val = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
-                    print("validation images, labels, & info loaded")
+        #             data_val = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
+        #             print("validation images, labels, & info loaded")
        
-        with open('./datasets/reduced_data/sets/test_images.pkl', 'rb') as f:
+        # with open('./datasets/' + dataset_folder + '/sets/test_images.pkl', 'rb') as f:
             
-            with open('./datasets/reduced_data/sets/test_labels.pkl', 'rb') as g:
+        #     with open('./datasets/' + dataset_folder + '/sets/test_labels.pkl', 'rb') as g:
 
-                with open('./datasets/reduced_data/sets/test_info.pkl', 'rb') as h:
+        #         with open('./datasets/' + dataset_folder + '/sets/test_info.pkl', 'rb') as h:
             
-                    data_test = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
-                    print("test images, labels, & info loaded")
+        #             data_test = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
+        #             print("test images, labels, & info loaded")
                 
-        return data_train, data_val, data_test, self.metadata, [n_neighbors, n_components]
+        # return data_train, data_val, data_test, self.metadata, [n_neighbors, n_components]
 
 
 def main():

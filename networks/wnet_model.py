@@ -117,26 +117,26 @@ class WNet3D(nn.Module):
         # x_up1 = self.conv_transpose1(x_encoded5)
         # x_decoded = self.unet_decoder1(torch.cat((x_up1, x_encoded4), dim = 1))
         
-        # x_up2 = self.conv_transpose2(x_encoded4)
-        # x_decoded = self.unet_decoder2(torch.cat((x_up2, x_encoded3), dim = 1))
+        # # x_up2 = self.conv_transpose2(x_encoded4)
+        # # x_decoded = self.unet_decoder2(torch.cat((x_up2, x_encoded3), dim = 1))
         
-        x_up3 = self.conv_transpose3(x_encoded3)
-        x_decoded = self.unet_decoder3(torch.cat((x_up3, x_encoded2), dim = 1))
+        # x_up3 = self.conv_transpose3(x_encoded3)
+        # x_decoded = self.unet_decoder3(torch.cat((x_up3, x_encoded2), dim = 1))
   
-        x_up4 = self.conv_transpose4(x_decoded)
-        x_decoded = self.unet_decoder4(torch.cat((x_up4, x_encoded1), dim = 1))
+        # x_up4 = self.conv_transpose4(x_decoded)
+        # x_decoded = self.unet_decoder4(torch.cat((x_up4, x_encoded1), dim = 1))
         
-        output = self.unet1_out(x_decoded)
+        # output = self.unet1_out(x_decoded)
         
-        # x_encoded1 = self.unet_encoder1(output)
-        x_encoded1 = self.post_unet1(output)
-        x_pool = self.pool(x_encoded1)
+        # # x_encoded1 = self.unet_encoder1(output)
+        # x_encoded1 = self.post_unet1(output)
+        # x_pool = self.pool(x_encoded1)
         
-        x_encoded2 = self.unet_encoder2(x_pool)
-        x_pool = self.pool(x_encoded2)
+        # x_encoded2 = self.unet_encoder2(x_pool)
+        # x_pool = self.pool(x_encoded2)
         
-        x_encoded3 = self.unet_encoder3(x_pool)
-        # x_pool = self.pool(x_encoded3)
+        # x_encoded3 = self.unet_encoder3(x_pool)
+        # # x_pool = self.pool(x_encoded3)
         
         # x_encoded4 = self.unet_encoder4(x_pool)
         # x_pool = self.pool(x_encoded4)
