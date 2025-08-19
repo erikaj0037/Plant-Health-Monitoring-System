@@ -171,16 +171,21 @@ class Loader():
         voxel_value_mean = voxel_value_sum / total_voxels
         return voxel_value_mean, total_voxels
     
-    def open_gathered_data(self, dataset_folder, month_folder):
+    def open_gathered_images(self, dataset_folder, month_folder):
         images = None
         labels = None
         info = None
         
-        with open('./datasets/' + dataset_folder + '/' + str(month_folder.name) + '/images.pkl', 'rb') as f:
-            images = pickle.load(f)
-            
+        for set_folder in sorted(month_folder.iterdir()):
+            with open('./datasets/' + dataset_folder + '/' + str(month_folder.name) + '/' + str(set_folder.name) + 'images.pkl', 'rb') as f:
+                images = pickle.load(f)
+                
+                
+        
+
+    def open_gathered_labels_info(self, dataset_folder, month_folder):
         with open('./datasets/' + dataset_folder + '/' + str(month_folder.name) + '/labels.pkl', 'rb') as f:
-            labels = pickle.load(f)
+                labels = pickle.load(f)
 
         with open('./datasets' + dataset_folder + '/' + str(month_folder.name) + '/info.pkl', 'rb') as f:
             info = pickle.load(f)
@@ -287,6 +292,25 @@ class Loader():
         with open('./datasets/' + dataset_folder + '/' + set + '/info.pkl', 'wb') as f:
             pickle.dump(info, f)
 
+    def standardize_set(self, dataset_folder: str):
+        path = Path(r'./datasets/' + dataset_folder)
+
+        for month_folder in sorted(path.iterdir()):
+            if month_folder.name[0] == ".":
+                    continue
+            if month_folder.name[0] == "sets":
+                    continue
+            
+            with open('./datasets/' + dataset_folder + '/' + str(month_folder.name) + '/images.pkl', 'rb') as f:
+            images = pickle.load(f)
+            
+            with open('./datasets/' + dataset_folder + '/' + str(month_folder.name) + '/labels.pkl', 'rb') as f:
+                labels = pickle.load(f)
+
+            with open('./datasets' + dataset_folder + '/' + str(month_folder.name) + '/info.pkl', 'rb') as f:
+                info = pickle.load(f)
+
+            
     def split_data(self, n_components: int, dataset_folder: str, image_shape: np.ndarray, image_count):
         print("splitting data...")
         

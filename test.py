@@ -56,6 +56,50 @@ import torch
 # labels_padded = torch.transpose(temp_padded, 1, 2)
 # print(labels_padded)
 
-x = np.array([[2, 3], [5,2]])
-y = np.array([[4, 4], [7,2], [9,0]])
-print(np.sum(y))
+# x = np.array([[2, 3], [5,2], [3,4]])
+# y = np.array([[9, 8], [7,2], [9,0]])
+
+# with open('test.npy', 'wb') as f:
+#     np.save(f, x)
+#     np.save(f, y)
+
+# with open('test.npy', 'rb') as f:
+#     x = np.load('test.npy', mmap_mode='r')
+#     print(x)
+#     print(str(sys.getsizeof(x) / 1000000000) + " GB")
+#     mean = np.mean(x)
+#     print("x mean: " + str(mean))
+
+#     y = np.load('test.npy', mmap_mode='r')
+#     print(y)
+#     print(str(sys.getsizeof(y) / 1000000000) + " GB")
+#     print("y mean: " + str(mean))
+
+#     z = np.array([x, y])
+#     print(str(sys.getsizeof(z) / 1000000000) + " GB")
+#     print("z mean: " + str(mean))
+
+# with open('test.npy', 'rb') as f:
+#     x = np.load('test.npy')
+#     print(str(sys.getsizeof(x) / 1000000000) + " GB")
+#     mean = np.mean(x)
+#     print("x mean: " + str(mean))
+
+#     y = np.load('test.npy')
+#     print(str(sys.getsizeof(y) / 1000000000) + " GB")
+#     print("y mean: " + str(mean))
+
+#     z = np.array([x, y])
+#     print(str(sys.getsizeof(z) / 1000000000) + " GB")
+#     print("z mean: " + str(mean))
+
+# a=np.array([[1, 2, 3], [4, 5, 6]])
+# b=np.array([1, 2])
+# with open('tmp/test.npz', 'wb') as f:
+#     np.savez('tmp/123.npz', a=a)
+#     np.savez('tmp/123.npz', b=b)
+#     data = np.load('tmp/123.npz')
+#     # data['a']
+#     print(data['b'])
+    
+#     data.close()
