@@ -29,6 +29,7 @@ from torch.nn.utils.rnn import pad_sequence
 # import numpy as np
 # import skcuda.linalg as linalg
 # from skcuda.linalg import PCA as cuPCA
+from dimensionality_reduction import PCAnalysis
 
 class dataset(Dataset): 
     def __init__(self, images, labels, info): 
@@ -79,7 +80,7 @@ class dataset(Dataset):
 #     def ascii_to_string(ascii_list):
 #         return ''.join(chr(char) for char in ascii_list)
 
-class Loader():
+class GatherData():
     def __init__(self):
         
         self.metadata = {'description': 'Data recorded with Specim IQ', 'samples': '256', 'lines': '256', 'bands': '204', 'header offset': '0', 'file type': 'ENVI', 'data type': '4', 'interleave': 'BIL', 'sensor type': 'SPECIM IQ', 'byte order': '0', 'default bands': ['70', '53', '19'], 'latitude': '0.00000000', 'longitude': '0.00000000', 'acquisition date': '07-04-2021', 'errors': 'none', 'binning': ['1', '1'], 'tint': '17', 'fps': '58.8235', 'wavelength': ['397.32', '400.20', '403.09', '405.97', '408.85', '411.74', '414.63', '417.52', '420.40', '423.29', '426.19', '429.08', '431.97', '434.87', '437.76', '440.66', '443.56', '446.45', '449.35', '452.25', '455.16', '458.06', '460.96', '463.87', '466.77', '469.68', '472.59', '475.50', '478.41', '481.32', '484.23', '487.14', '490.06', '492.97', '495.89', '498.80', '501.72', '504.64', '507.56', '510.48', '513.40', '516.33', '519.25', '522.18', '525.10', '528.03', '530.96', '533.89', '536.82', '539.75', '542.68', '545.62', '548.55', '551.49', '554.43', '557.36', '560.30', '563.24', '566.18', '569.12', '572.07', '575.01', '577.96', '580.90', '583.85', '586.80', '589.75', '592.70', '595.65', '598.60', '601.55', '604.51', '607.46', '610.42', '613.38', '616.34', '619.30', '622.26', '625.22', '628.18', '631.15', '634.11', '637.08', '640.04', '643.01', '645.98', '648.95', '651.92', '654.89', '657.87', '660.84', '663.81', '666.79', '669.77', '672.75', '675.73', '678.71', '681.69', '684.67', '687.65', '690.64', '693.62', '696.61', '699.60', '702.58', '705.57', '708.57', '711.56', '714.55', '717.54', '720.54', '723.53', '726.53', '729.53', '732.53', '735.53', '738.53', '741.53', '744.53', '747.54', '750.54', '753.55', '756.56', '759.56', '762.57', '765.58', '768.60', '771.61', '774.62', '777.64', '780.65', '783.67', '786.68', '789.70', '792.72', '795.74', '798.77', '801.79', '804.81', '807.84', '810.86', '813.89', '816.92', '819.95', '822.98', '826.01', '829.04', '832.07', '835.11', '838.14', '841.18', '844.22', '847.25', '850.29', '853.33', '856.37', '859.42', '862.46', '865.50', '868.55', '871.60', '874.64', '877.69', '880.74', '883.79', '886.84', '889.90', '892.95', '896.01', '899.06', '902.12', '905.18', '908.24', '911.30', '914.36', '917.42', '920.48', '923.55', '926.61', '929.68', '932.74', '935.81', '938.88', '941.95', '945.02', '948.10', '951.17', '954.24', '957.32', '960.40', '963.47', '966.55', '969.63', '972.71', '975.79', '978.88', '981.96', '985.05', '988.13', '991.22', '994.31', '997.40', '1000.49', '1003.58']}
@@ -142,7 +143,8 @@ class Loader():
             return [0]
         
     def get_empty_sets(self, image_shape):
-        images = np.empty((1, image_shape[0], image_shape[1], image_shape[2]))
+        desired_shape = tuple(np.insert(image_shape, 0, 1))
+        images = np.empty(desired_shape)
         labels = [] 
         info = []
         return images, labels, info
@@ -166,61 +168,44 @@ class Loader():
                 csv_file = file
         return hdr_file, data_file, csv_file
 
-    def image_set_mean(self, image_count, image_shape, voxel_value_sum):
-        total_voxels = image_count*np.prod(image_shape)
-        voxel_value_mean = voxel_value_sum / total_voxels
-        return voxel_value_mean, total_voxels
-    
-    def open_gathered_images(self, dataset_folder, month_folder):
-        images = None
-        labels = None
-        info = None
-        
-        for set_folder in sorted(month_folder.iterdir()):
-            with open('./datasets/' + dataset_folder + '/' + str(month_folder.name) + '/' + str(set_folder.name) + 'images.pkl', 'rb') as f:
+    def open_gathered_data(self, month_folder):
+        with open('./datasets/reduced_data/' + str(month_folder.name) + '/images.pkl', 'rb') as f:
                 images = pickle.load(f)
-                
-                
-        
 
-    def open_gathered_labels_info(self, dataset_folder, month_folder):
-        with open('./datasets/' + dataset_folder + '/' + str(month_folder.name) + '/labels.pkl', 'rb') as f:
+        with open('./datasets/reduced_data/' + str(month_folder.name) + '/labels.pkl', 'rb') as f:
                 labels = pickle.load(f)
 
-        with open('./datasets' + dataset_folder + '/' + str(month_folder.name) + '/info.pkl', 'rb') as f:
+        with open('./datasets/reduced_data/' + str(month_folder.name) + '/info.pkl', 'rb') as f:
             info = pickle.load(f)
 
         return images, labels, info
         
-    def save_image_subset(self, image_array, set_number, month_folder):
+    def save_gathered_data(self, images, labels, info, month_folder):
         print("saving images...")
-        with open('./datasets/raw_data/' + str(month_folder.name) + '/image_set' + str(set_number) + '.pkl', 'wb') as f:
-            images = image_array[1:]
-            print("images list size: " + str(len(image_array)))
-            print("images memory size: " + str(sys.getsizeof(image_array) / 1000000000) + " GB")
+        with open('./datasets/reduced_data/' + str(month_folder.name) + '/images.pkl', 'wb') as f:
+            images = images[1:]
+            print("images list size: " + str(len(images)))
+            print("images memory size: " + str(sys.getsizeof(images) / 1000000000) + " GB")
             pickle.dump(images, f)
     
-    def save_label_set(self, labels, month_folder):
         print("saving labels...")
         print("labels list size: " + str(len(labels)))
         
         print("labels memory size: " + str(sys.getsizeof(labels) / 1000000000) + " GB")
-        with open('./datasets/raw_data/' + str(month_folder.name) + '/labels.pkl', 'wb') as f:
+        with open('./datasets/reduced_data/' + str(month_folder.name) + '/labels.pkl', 'wb') as f:
             pickle.dump(labels, f)
 
-    def save_info_set(self, info, month_folder):
         print("info list size: " + str(len(info)))
-        with open('./datasets/raw_data/' + str(month_folder.name) + '/info.pkl', 'wb') as f:
+        with open('./datasets/reduced_data/' + str(month_folder.name) + '/info.pkl', 'wb') as f:
             pickle.dump(info, f)
     
-    def gather_data(self, n_neighbors: int, n_components = int, save_files = bool):
+    def gather_data(self, n_components = int):
         print("gathering data...")
  
-        path = Path(r'./datasets/apple_fireblight')
-        image_shape = np.array([512, 512, 204])
-        image_count = 0
-        image_set_count = 0
-        voxel_value_sum = 0
+        path = Path(r'./datasets/raw_data')
+        image_shape = np.array([512, 512, n_components])
+        
+        
 
         for month_folder in sorted(path.iterdir()):
             if month_folder.name[0] == ".":
@@ -241,55 +226,49 @@ class Loader():
                     hdr_file, data_file, csv_file = self.find_files(plant_folder)
                     try:
                         if hdr_file and data_file:
-
+                            pca_algorithm = PCAnalysis(n_components=n_components) #must be reinitialized each time there is new image
                             hsi = self.get_hsi(hdr_file, data_file)
-                            image_count += 1
-                            voxel_value_sum += np.sum(hsi)
+                            hsi_reduced = pca_algorithm.pca_transform(hsi)
 
-                            if save_files:
-                                images = np.append(images, np.array([hsi]), axis = 0)
-                                
-                                if sys.getsizeof(images) / 1000000000 >= 24:
-                                    
-                                    image_set_count += 1
-                                    print("check1")
-                                    self.save_image_subset(images, image_set_count, month_folder)
-                                    print("check2")
-                                    images, _, _ = self.get_empty_sets(image_shape)
-                                    print("check3")
-
-                                info.append([month_folder.name, day_folder.name, plant_folder.name])
-
-                                labels.append(self.get_image_labels(csv_file))
-                            
+                            images = np.append(images, np.expand_dims(hsi_reduced, axis = 0), axis = 0)
+                            info.append([month_folder.name, day_folder.name, plant_folder.name])
+                            labels.append(self.get_image_labels(csv_file))
                     except:
                         continue
-            if save_files:
-                image_set_count += 1
 
-                self.save_image_subset(images, image_set_count, month_folder)
-                self.save_label_set(labels, month_folder)
-                self.save_info_set(info, month_folder)
-            
-            voxel_value_mean, total_voxels = self.image_set_mean(image_count, image_shape, voxel_value_sum)
-            
-            return [voxel_value_mean, total_voxels]
+            self.save_gathered_data(images, labels, info, month_folder)
+
+class SplitData(GatherData):
+    def __init__(self, n_components):
+        self.image_shape = np.array([512, 512, n_components])
+        self.train_set_images, self.train_set_labels, self.train_set_info = self.get_empty_sets(self.image_shape)
+        self.val_set_images, self.val_set_labels, self.val_set_info = self.get_empty_sets(self.image_shape)
+        self.test_set_images, self.test_set_labels, self.test_set_info = self.get_empty_sets(self.image_shape)
+
+    def shuffle_sets(self, images:np.ndarray, labels:list, info:list):
+        assert len(images)==len(labels), "Length of image and labels sets are unequal!"
+        assert len(images)==len(info), "Length of image and info sets are unequal!"
+
+        indices = np.arange(len(images))
+        random.shuffle(indices)
+        
+        images = images[indices]
+        labels = [labels[i] for i in indices]
+        info = [info[i] for i in indices]
+
+        return images, labels, info
 
 
-    def shuffle_save_sets(self, images, labels, info, set: str, dataset_folder):
-        i = np.arange(len(images))
-        random.shuffle(i)
-        images = images[i]
-        labels = [labels[k] for k in i]
-        info = [info[k] for k in i]
+    def shuffle_save_sets(self, images:np.ndarray, labels:list, info:list, set_split: str):
+        images, labels, info = self.shuffle_sets(images[1:], labels, info) #image[1:] removes dummy element at index 0
 
-        with open('./datasets/' + dataset_folder + '/' + set + '/images.pkl', 'wb') as f:
+        with open('./datasets/split_data/' + set_split + '/images.pkl', 'wb') as f:
             pickle.dump(images, f)
                            
-        with open('./datasets/' + dataset_folder + '/' + set + '/labels.pkl', 'wb') as f:
+        with open('./datasets/split_data/' + set_split + '/labels.pkl', 'wb') as f:
             pickle.dump(labels, f)
             
-        with open('./datasets/' + dataset_folder + '/' + set + '/info.pkl', 'wb') as f:
+        with open('./datasets/split_data/' + set_split + '/info.pkl', 'wb') as f:
             pickle.dump(info, f)
 
     def standardize_set(self, dataset_folder: str):
@@ -301,100 +280,68 @@ class Loader():
             if month_folder.name[0] == "sets":
                     continue
             
-            with open('./datasets/' + dataset_folder + '/' + str(month_folder.name) + '/images.pkl', 'rb') as f:
-            images = pickle.load(f)
+            with open('./datasets/reduced_data/' + str(month_folder.name) + '/images.pkl', 'rb') as f:
+                images = pickle.load(f)
             
-            with open('./datasets/' + dataset_folder + '/' + str(month_folder.name) + '/labels.pkl', 'rb') as f:
+            with open('./datasets/reduced_data/' + str(month_folder.name) + '/labels.pkl', 'rb') as f:
                 labels = pickle.load(f)
 
-            with open('./datasets' + dataset_folder + '/' + str(month_folder.name) + '/info.pkl', 'rb') as f:
+            with open('./datasets/reduced_data/' + str(month_folder.name) + '/info.pkl', 'rb') as f:
                 info = pickle.load(f)
 
-            
-    def split_data(self, n_components: int, dataset_folder: str, image_shape: np.ndarray, image_count):
+    def split_set(self, images:np.ndarray, labels:list, info:list, threshold: float):
+        test_thresh =int(np.floor(threshold*len(images)))
+        images_split1 = images[:test_thresh]
+        labels_split1 = labels[:test_thresh]
+        info_split1 = info[:test_thresh]
+        
+        images_split2 = images[test_thresh:]
+        labels_split2 = labels[test_thresh:]
+        info_split2 = info[test_thresh:]
+
+        return images_split1, labels_split1, info_split1, images_split2, labels_split2, info_split2
+
+    def append_set(image_set, labels_set, info_set, images, labels, info):
+        image_set = np.append(image_set, images, axis = 0)
+        label_set += labels
+        info_set += info
+        
+        return image_set, label_set, info_set
+
+    def split_data(self, image_shape: np.ndarray):
         print("splitting data...")
-        
-        train_set_images, train_set_labels, train_set_info = self.get_empty_sets(image_shape)
-        val_set_images, val_set_labels, val_set_info = self.get_empty_sets(image_shape)
-        test_set_images, test_set_labels, test_set_info = self.get_empty_sets(image_shape)
-        
-        path = Path(r'./datasets/' + dataset_folder + '/')
+    
+        path = Path(r'./datasets/reduced_data/')
         for month_folder in sorted(path.iterdir()):
             if month_folder.name[0] == ".":
                     continue
-            if month_folder.name[0] == "sets":
-                    continue
             print("month:", month_folder.name)
             
-            images, labels, info = self.open_gathered_data(dataset_folder, month_folder)
-        
-            #shuffle and divide into 5 sets
-            indices = np.arange(image_count)
-            random.shuffle(indices)
-            #divide into training, validation, and test sets along with subsets
-            image_set = np.zeros((image_count, image_shape[0], image_shape[1], image_shape[2]))
-            # print(len(labels))
-            
-            images = images[indices]
-            labels = [labels[i] for i in indices]
-            info = [info[i] for i in indices]
+            images, labels, info = self.open_gathered_data(month_folder)
+            images, labels, info = self.shuffle_sets(images, labels, info)
 
             # images = self.standardize(images)
+            split_thresh = 0.8 # 80/20% train/test, 80/20% train/val
+            images_train, labels_train, info_train, images_test, labels_test, info_test = self.split_set(images, labels, info, split_thresh)
+            images_train, labels_train, info_train, images_val, labels_val, info_val = self.split_set(images_train, labels_train, info_train, split_thresh)
             
-            test_thresh =int(np.floor(.8*len(images)))
-            images_train_val = images[:test_thresh]
-            labels_train_val = labels[:test_thresh]
-            info_train_val = info[:test_thresh]
-            
-            images_test = images[test_thresh:]
-            labels_test = labels[test_thresh:]
-            info_test = info[test_thresh:]
-            
-            val_thresh = int(np.floor(.8*len(images_train_val)))
-            images_train = images_train_val[:val_thresh]
-            labels_train = labels_train_val[:val_thresh]
-            info_train = info_train_val[:val_thresh]
-            
-            images_val = images_train_val[val_thresh:]
-            labels_val = labels_train_val[val_thresh:]
-            info_val = info_train_val[val_thresh:]
-            
-            train_set_images = np.append(train_set_images, images_train, axis = 0)
-            train_set_labels += labels_train
-            train_set_info += info_train
-            
-            val_set_images = np.append(val_set_images, images_val, axis = 0)
-            val_set_labels += labels_val
-            val_set_info += info_val
-            
-            test_set_images = np.append(test_set_images, images_test, axis = 0)
-            test_set_labels += labels_test
-            test_set_info += info_test
-            
-            print("training subset size:",  len(train_set_images))
-            
-            print("validation subset:", len(val_set_images))
-            
-            print("test subset:", len(test_set_images))
-        
-        train_set_images = train_set_images[1:] #removes dummy image at index 0
-        val_set_images = val_set_images[1:]
-        test_set_images = test_set_images[1:]
-        
-        
-        self.shuffle_save_sets(train_set_images, train_set_labels, train_set_info, "training", dataset_folder)
-        self.shuffle_save_sets(val_set_images, val_set_labels, val_set_info, "validation", dataset_folder)
-        self.shuffle_save_sets(test_set_images, test_set_labels, test_set_info, "test", dataset_folder)
+            self.train_set_images, self.train_set_labels, self.train_set_info = self.append_set(self.train_set_images, self.train_set_labels, self.train_set_info, images_train, labels_train, info_train)
+            self.val_set_images, self.val_set_labels, self.val_set_info = self.append_set(self.val_set_images, self.val_set_labels, self.val_set_info, images_val, labels_val, info_val)
+            self.test_set_images, self.test_set_labels, self.test_set_info = self.append_set(self.test_set_images, self.test_set_labels, self.test_set_info, images_test, labels_test, info_test)
 
-        train_set_images, val_set_images, test_set_images = self.standardize(train_set_images, val_set_images, test_set_images)
+            print("training subset size:",  len(self.train_set_images))
+            print("validation subset:", len(self.val_set_images))
+            print("test subset:", len(self.test_set_images))
         
-        ###insert avg function
+        self.shuffle_save_sets(self.train_set_images, self.train_set_labels, self.train_set_info, "training")
+        self.shuffle_save_sets(self.val_set_images, self.val_set_labels, self.val_set_info, "validation")
+        self.shuffle_save_sets(self.test_set_images, self.test_set_labels, self.test_set_info, "test")
         
                 
-    def load_data(self, save_files = 'False'):
+    def load_data(self):
         n_neighbors = 20
-        n_components = 10
-        statistical_data =  self.gather_data(n_neighbors, n_components, save_files) #returns [voxel_value mean, total number of voxels]
+        n_components = 3
+        self.gather_data(n_components) #returns [voxel_value mean, total number of voxels]
         # dataset_folder = "raw_data"
         # self.split_data(n_components)
         # 
