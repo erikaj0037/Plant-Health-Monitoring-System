@@ -1,4 +1,3 @@
-# import spectral as spy
 import spectral.io.envi as envi
 from pathlib import Path
 import sys
@@ -6,29 +5,11 @@ import random
 import pickle
 import pandas as pd
 import numpy as np
-
-# from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-# from sklearn.feature_selection import VarianceThreshold
-# from sklearn.datasets import load_digits
-
-
-# import matplotlib.pyplot as plt
-# import seaborn as sns
-# import pandas as pd
 import umap
 import torch
-# import torch.nn as nn
-# import torch.nn.functional as F
 from torch.utils.data import Dataset 
 from torch.nn.utils.rnn import pad_sequence
-# from torch.utils.data import DataLoader
-
-# import pycuda.autoinit
-# import pycuda.gpuarray as gpuarray
-# import numpy as np
-# import skcuda.linalg as linalg
-# from skcuda.linalg import PCA as cuPCA
 from dimensionality_reduction import PCAnalysis
 
 class dataset(Dataset): 
