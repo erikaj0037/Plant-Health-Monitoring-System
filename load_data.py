@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 # from sklearn.feature_selection import VarianceThreshold
 # from sklearn.datasets import load_digits
-# from sklearn.model_selection import train_test_split
+
 
 # import matplotlib.pyplot as plt
 # import seaborn as sns
@@ -259,16 +259,16 @@ class SplitData(GatherData):
         return images, labels, info
 
 
-    def shuffle_save_sets(self, images:np.ndarray, labels:list, info:list, set_split: str):
+    def shuffle_save_sets(self, images:np.ndarray, labels:list, info:list, set_split_type: str):
         images, labels, info = self.shuffle_sets(images[1:], labels, info) #image[1:] removes dummy element at index 0
 
-        with open('./datasets/split_data/' + set_split + '/images.pkl', 'wb') as f:
+        with open('./datasets/split_data/' + set_split_type + '/images.pkl', 'wb') as f:
             pickle.dump(images, f)
                            
-        with open('./datasets/split_data/' + set_split + '/labels.pkl', 'wb') as f:
+        with open('./datasets/split_data/' + set_split_type + '/labels.pkl', 'wb') as f:
             pickle.dump(labels, f)
             
-        with open('./datasets/split_data/' + set_split + '/info.pkl', 'wb') as f:
+        with open('./datasets/split_data/' + set_split_type + '/info.pkl', 'wb') as f:
             pickle.dump(info, f)
 
     def standardize_set(self, dataset_folder: str):
@@ -289,19 +289,18 @@ class SplitData(GatherData):
             with open('./datasets/reduced_data/' + str(month_folder.name) + '/info.pkl', 'rb') as f:
                 info = pickle.load(f)
 
-    def split_set(self, images:np.ndarray, labels:list, info:list, threshold: float):
-        test_thresh =int(np.floor(threshold*len(images)))
-        images_split1 = images[:test_thresh]
-        labels_split1 = labels[:test_thresh]
-        info_split1 = info[:test_thresh]
-        
-        images_split2 = images[test_thresh:]
-        labels_split2 = labels[test_thresh:]
-        info_split2 = info[test_thresh:]
+    def split_set(self, images:np.ndarray, labels:list, info:list, threshold_ratio: float, shuffle: bool):
+        if shuffle:
+            images, labels, info = self.shuffle_sets(images, labels, info)
 
-        return images_split1, labels_split1, info_split1, images_split2, labels_split2, info_split2
+        test_thresh =int(np.floor(threshold_ratio*len(images)))
+        images_split = [images[:test_thresh], images[test_thresh:]]
+        labels_split = [labels[:test_thresh], labels[test_thresh:]]
+        info_split = [info[:test_thresh], info[test_thresh:]]
 
-    def append_set(image_set, labels_set, info_set, images, labels, info):
+        return images_split[0], labels_split[0], info_split[0], images_split[1], labels_split[1], info_split[1]
+
+    def append_set(image_set:np.ndarray, labels_set:list, info_set:list, images:np.ndarray, labels:list, info:list):
         image_set = np.append(image_set, images, axis = 0)
         label_set += labels
         info_set += info
@@ -318,12 +317,11 @@ class SplitData(GatherData):
             print("month:", month_folder.name)
             
             images, labels, info = self.open_gathered_data(month_folder)
-            images, labels, info = self.shuffle_sets(images, labels, info)
 
             # images = self.standardize(images)
-            split_thresh = 0.8 # 80/20% train/test, 80/20% train/val
-            images_train, labels_train, info_train, images_test, labels_test, info_test = self.split_set(images, labels, info, split_thresh)
-            images_train, labels_train, info_train, images_val, labels_val, info_val = self.split_set(images_train, labels_train, info_train, split_thresh)
+            split_thresh_ratio = 0.8 # 80/20% train/test, 80/20% train/val
+            images_train, labels_train, info_train, images_test, labels_test, info_test = self.split_set(images, labels, info, split_thresh_ratio, shuffle = 'True')
+            images_train, labels_train, info_train, images_val, labels_val, info_val = self.split_set(images_train, labels_train, info_train, split_thresh_ratio, shuffle = 'False')
             
             self.train_set_images, self.train_set_labels, self.train_set_info = self.append_set(self.train_set_images, self.train_set_labels, self.train_set_info, images_train, labels_train, info_train)
             self.val_set_images, self.val_set_labels, self.val_set_info = self.append_set(self.val_set_images, self.val_set_labels, self.val_set_info, images_val, labels_val, info_val)
@@ -333,52 +331,46 @@ class SplitData(GatherData):
             print("validation subset:", len(self.val_set_images))
             print("test subset:", len(self.test_set_images))
         
-        self.shuffle_save_sets(self.train_set_images, self.train_set_labels, self.train_set_info, "training")
+        #insert standardization
+        self.shuffle_save_sets(self.train_set_images, self.train_set_labels, self.train_set_info, "train")
         self.shuffle_save_sets(self.val_set_images, self.val_set_labels, self.val_set_info, "validation")
         self.shuffle_save_sets(self.test_set_images, self.test_set_labels, self.test_set_info, "test")
         
-                
+class Loader():
+    def __init__(self, n_components):
+        self.n_components = n_components
+
+    def open_datasets(self, set_split_type: str):
+        images, labels, info = None
+        with open('./datasets/split_data/' + set_split_type + '/images.pkl', 'rb') as f:
+            images = pickle.load(f)
+                           
+        with open('./datasets/split_data/' + set_split_type + '/labels.pkl', 'rb') as f:
+            labels = pickle.dump(labels, f)
+            
+        with open('./datasets/split_data/' + set_split_type + '/info.pkl', 'rb') as f:
+            info = pickle.dump(info, f)
+
+        return images, labels, info
+    
+    def form_dataset(self, set_split_type:str):
+        images, labels, info = self.open_data_sets(set_split_type)
+        data = dataset(images, labels, info)
+        return data
+
+
     def load_data(self):
-        n_neighbors = 20
-        n_components = 3
-        self.gather_data(n_components) #returns [voxel_value mean, total number of voxels]
-        # dataset_folder = "raw_data"
-        # self.split_data(n_components)
-        # 
-        # print("loading datasets...")
-        # data_train = None
-        # data_val = None
-        # data_test = None
+        print("loading datasets...")
         
-        # with open('./datasets/' + dataset_folder + '/sets/train_images.pkl', 'rb') as f:
-
-        #     with open('./datasets/' + dataset_folder + '/sets/train_labels.pkl', 'rb') as g:
-
-        #         with open('./datasets/' + dataset_folder + '/sets/train_info.pkl', 'rb') as h:
-            
-        #             data_train = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
-        #             print("training images, labels, & info loaded")
-        
-        # with open('./datasets/' + dataset_folder + '/sets/val_images.pkl', 'rb') as f:
-            
-        #     with open('./datasets/' + dataset_folder + '/sets/val_labels.pkl', 'rb') as g:
-
-        #         with open('./datasets/' + dataset_folder + '/sets/val_info.pkl', 'rb') as h:
-            
-        #             data_val = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
-        #             print("validation images, labels, & info loaded")
-       
-        # with open('./datasets/' + dataset_folder + '/sets/test_images.pkl', 'rb') as f:
-            
-        #     with open('./datasets/' + dataset_folder + '/sets/test_labels.pkl', 'rb') as g:
-
-        #         with open('./datasets/' + dataset_folder + '/sets/test_info.pkl', 'rb') as h:
-            
-        #             data_test = dataset(pickle.load(f), pickle.load(g), pickle.load(h))
-        #             print("test images, labels, & info loaded")
+        data_train = self.form_dataset("train")
+        data_train = self.form_dataset("validation")
+        data_test = self.form_dataset("test")
                 
-        # return data_train, data_val, data_test, self.metadata, [n_neighbors, n_components]
+        return data_train, data_val, data_test, self.metadata, [n_neighbors, n_components]
 
+##to-do
+#generate script with metadata dictionary
+#standardization
 
 def main():
     loader = Loader()
