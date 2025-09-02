@@ -36,30 +36,6 @@ class dataset(Dataset):
         
 
         return image, labels, info
-    
-    def string_to_ascii(self, string_list):
-        ascii_list = []
-        for string in string_list:
-            ascii_list.append([ord(char) for char in string])
-        # ascii_padded = self.pad_ascii(ascii_list)
-        
-        return ascii_list
-    
-    def pad_ascii(self, ascii_list):
-        max_str_len = 14
-#         max_ = 0
-#         for ascii_ in ascii_list:
-#             if len(ascii_) > max_:
-#                 max_ = len(ascii_)
-        ascii_padded = np.zeros((1,max_str_len))
-        for ascii_ in ascii_list:
-            ascii_padded = np.append(ascii_padded, np.array([np.pad(np.array(ascii_), (0, max_str_len - len(ascii_)))]), axis = 0)
-
-        return ascii_padded[1:].astype(int)
-
-#     # ASCII to String
-#     def ascii_to_string(ascii_list):
-#         return ''.join(chr(char) for char in ascii_list)
 
 class GatherData():
     def __init__(self):
@@ -359,3 +335,4 @@ def main():
     
 if __name__ == "__main__":
     main()
+
