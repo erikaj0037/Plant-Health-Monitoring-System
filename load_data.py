@@ -67,20 +67,20 @@ class GatherData():
 
     #     return images_standardized
     
-    def standardize(self, training_set, validation_set, test_set):
-        print("standardizing data...")
-        set = np.append(training_set, validation_set, axis = 0)
-        set = np.append(set, test_set, axis = 0)
-        set_mean = np.sum(set) / np.prod(set.shape)
-        set_std = np.std(set)
-        images_standardized = (set - set_mean) / set_std
+    # def standardize(self, training_set, validation_set, test_set):
+    #     print("standardizing data...")
+    #     set = np.append(training_set, validation_set, axis = 0)
+    #     set = np.append(set, test_set, axis = 0)
+    #     set_mean = np.sum(set) / np.prod(set.shape)
+    #     set_std = np.std(set)
+    #     images_standardized = (set - set_mean) / set_std
 
-        i = len(training_set)
-        j = len(validation_set)
-        train_standardized = images_standardized[:i]
-        val_standardized = images_standardized[i:i+j]
-        test_standardized = images_standardized[i+j:]
-        return train_standardized, val_standardized, test_standardized
+    #     i = len(training_set)
+    #     j = len(validation_set)
+    #     train_standardized = images_standardized[:i]
+    #     val_standardized = images_standardized[i:i+j]
+    #     test_standardized = images_standardized[i+j:]
+    #     return train_standardized, val_standardized, test_standardized
     
     def get_hsi(self, hdr_file, data_file):
         image = envi.open(hdr_file, data_file)
@@ -335,4 +335,5 @@ def main():
     
 if __name__ == "__main__":
     main()
+
 
