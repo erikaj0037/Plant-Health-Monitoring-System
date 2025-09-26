@@ -13,28 +13,6 @@ from torch.utils.data import Dataset
 from torch.nn.utils.rnn import pad_sequence
 from dimensionality_reduction import PCAnalysis
 
-class dataset(Dataset): 
-    def __init__(self, images, labels, info_indices): 
-        self.images = images
-        self.labels = labels
-        self.info_indices = info_indices
-  
-    def __len__(self): 
-        return len(self.images) 
-  
-    def __getitem__(self, index): 
-        image = torch.tensor(self.images[index]).float()
-        #image dimensions (H, W, D)
-        image = torch.transpose(image, 0, 2) #(D, W, H)
-        image = torch.transpose(image, 1, 2) #(D, H, W); ordering necessary for network
-
-        labels = torch.tensor(self.labels[index])
-
-        info_indices =  torch.tensor(self.info_indices[index])
-        
-
-        return image, labels, info_indices
-
 class GatherData():
     def __init__(self):
         
@@ -43,12 +21,13 @@ class GatherData():
         self.wavelengths = self.metadata['wavelength']
         
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    def save_to_metadata(self, metadata_element):
-        file_path = './datasets/raw_data/metadata.pkl'
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as f:
-                pickle.load()
-                pickle.dump()
+
+    # def save_to_metadata(self, metadata_element):
+    #     file_path = './datasets/raw_data/metadata.pkl'
+    #     if os.path.exists(file_path):
+    #         with open(file_path, 'r') as f:
+    #             pickle.load()
+    #             pickle.dump()
 
     def reduce(self, image, n_neighbors, n_components):
         # print("reducing dimensionality of image...")
@@ -98,10 +77,15 @@ class GatherData():
             # print("getting labels...")
             labels_DF = pd.read_csv(csv_file)
 #                             print(labels_DF.to_numpy())
-            return labels_DF.values.tolist()
+            if len(labels_DF.values) > 0:
+                labels = [labels_DF.columns.to_numpy().astype(int).tolist()]
+                labels += labels_DF.values.tolist()
+                return labels
+            else: 
+                return [[0,0]]
 
         else: 
-            return [0]
+            return [[0,0]]
         
     def get_empty_sets(self, image_shape):
         desired_shape = tuple(np.insert(image_shape, 0, 1))
@@ -162,7 +146,7 @@ class GatherData():
         with open('./datasets/reduced_data/' + str(month_folder.name) + '/info.pkl', 'wb') as f:
             pickle.dump(info, f)
     
-    def gather_data(self, n_components = int):
+    def gather_data(self, n_components: int):
         print("gathering data...")
  
         path = Path(r'./datasets/raw_data')
@@ -185,17 +169,19 @@ class GatherData():
                         continue
                     
                     hdr_file, data_file, csv_file = self.find_files(plant_folder)
-                    try:
-                        if hdr_file and data_file:
-                            pca_algorithm = PCAnalysis(n_components=n_components) #must be reinitialized each time there is new image
-                            hsi = self.get_hsi(hdr_file, data_file)
-                            hsi_reduced = pca_algorithm.pca_transform(hsi)
+                    # try:
+                    if hdr_file and data_file:
+                        print("day:", day_folder.name)
+                        print("plant:", plant_folder.name)
+                        pca_algorithm = PCAnalysis(n_components=n_components) #must be reinitialized each time there is new image
+                        hsi = self.get_hsi(hdr_file, data_file)
+                        hsi_reduced = pca_algorithm.pca_transform(hsi)
 
-                            images = np.append(images, np.expand_dims(hsi_reduced, axis = 0), axis = 0)
-                            labels.append(self.get_image_labels(csv_file))
-                            info.append([month_folder.name, day_folder.name, plant_folder.name])
-                    except:
-                        continue
+                        images = np.append(images, np.expand_dims(hsi_reduced, axis = 0), axis = 0)
+                        labels.append(self.get_image_labels(csv_file))
+                        info.append([month_folder.name, day_folder.name, plant_folder.name])
+                    # except:
+                    #     continue
 
             self.save_gathered_data(images, labels, info, month_folder)
 
@@ -205,7 +191,7 @@ class GatherData():
 
 def main():
     gather_raw_data = GatherData()
-    gather_raw_data.gather_data()
+    gather_raw_data.gather_data(n_components=3)
     
 if __name__ == "__main__":
     main()

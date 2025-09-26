@@ -57,23 +57,36 @@ class SplitData(GatherData):
             info_indices = list(np.arange(len(info)))
             pickle.dump(info_indices, f)
 
-    def standardize_set(self, dataset_folder: str):
-        path = Path(r'./datasets/' + dataset_folder)
+    def standardize_train_set(self, training_set):
+        mean = np.mean(training_set)
+        std = np.std(training_set)
+        training_set_standardized = (training_set - mean) / std
 
-        for month_folder in sorted(path.iterdir()):
-            if month_folder.name[0] == ".":
-                    continue
-            if month_folder.name[0] == "sets":
-                    continue
-            
-            with open('./datasets/reduced_data/' + str(month_folder.name) + '/images.pkl', 'rb') as f:
-                images = pickle.load(f)
-            
-            with open('./datasets/reduced_data/' + str(month_folder.name) + '/labels.pkl', 'rb') as f:
-                labels = pickle.load(f)
-
-            with open('./datasets/reduced_data/' + str(month_folder.name) + '/info.pkl', 'rb') as f:
-                info = pickle.load(f)
+        with open('./datasets/split_data/standardization_values.pkl', 'wb') as f:
+            pickle.dump({"mean": mean, "std": std}, f)
+        return training_set_standardized
+    
+    def standardize(self, set):
+        std_values = None
+        with open('./datasets/split_data/standardization_values.pkl', 'rb') as f:
+            std_values = pickle.load(f)
+        set_standardized = (set - std_values['mean']) / std_values['std']
+        return set_standardized
+    
+    def normalize_train_set(self, training_set):
+        min = np.min(training_set)
+        max = np.max(training_set)
+        with open('./datasets/split_data/normalization_values.pkl', 'wb') as f:
+            pickle.dump({"max": max, "min": min}, f)
+        training_set_normalized = (training_set - min) / (max - min)
+        return training_set_normalized
+    
+    def normalize(self, set):
+        norm_values = None
+        with open('./datasets/split_data/normalization_values.pkl', 'rb') as f:
+            norm_values = pickle.load(f)
+        set_normalized = (set - norm_values['min']) / (norm_values['max'] - norm_values['min'])
+        return set_normalized
 
     def split_set(self, images:np.ndarray, labels:list, info:list, threshold_ratio: float, shuffle: bool):
         if shuffle:
@@ -86,7 +99,7 @@ class SplitData(GatherData):
 
         return images_split[0], labels_split[0], info_split[0], images_split[1], labels_split[1], info_split[1]
 
-    def append_set(image_set:np.ndarray, label_set:list, info_set:list, images:np.ndarray, labels:list, info:list):
+    def append_set(self, image_set:np.ndarray, label_set:list, info_set:list, images:np.ndarray, labels:list, info:list):
         image_set = np.append(image_set, images, axis = 0)
         label_set += labels
         info_set += info
@@ -113,6 +126,10 @@ class SplitData(GatherData):
             self.val_set_images, self.val_set_labels, self.val_set_info = self.append_set(self.val_set_images, self.val_set_labels, self.val_set_info, images_val, labels_val, info_val)
             self.test_set_images, self.test_set_labels, self.test_set_info = self.append_set(self.test_set_images, self.test_set_labels, self.test_set_info, images_test, labels_test, info_test)
 
+            self.train_set_images = self.normalize_train_set(self.train_set_images)
+            self.val_set_images = self.normalize(self.val_set_images)
+            self.test_set_images = self.normalize(self.test_set_images)
+
             print("training subset size:",  len(self.train_set_images))
             print("validation subset:", len(self.val_set_images))
             print("test subset:", len(self.test_set_images))
@@ -123,7 +140,7 @@ class SplitData(GatherData):
         self.shuffle_save_sets(self.test_set_images, self.test_set_labels, self.test_set_info, "test")
                
 def main():
-    data_splitter = SplitData()
+    data_splitter = SplitData(n_components=3)
     data_splitter.split_data()
     
 if __name__ == "__main__":

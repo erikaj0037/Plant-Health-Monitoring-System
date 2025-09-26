@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 import torch
+import pandas as pd
 
 # images = None
 # info = None
@@ -103,3 +104,22 @@ import torch
 #     print(data['b'])
     
 #     data.close()
+
+# labels_DF = pd.read_csv("./datasets/raw_data/july21/day_21/plant_2.5/pos_Plant2.5.csv")
+# if len(labels_DF.values) > 0:
+#     print(">")
+# else:
+#     print("=")
+# print(labels_DF.columns)
+# print(labels_DF.columns.to_numpy().astype(int).tolist())
+# labels = [labels_DF.columns.to_numpy().astype(int).tolist()]
+# labels += labels_DF.values.tolist()
+# print(labels)
+
+
+with open('./datasets/reduced_data/july21/images.pkl', 'rb') as f:
+    images = pickle.load(f)
+
+gray_img = images[0,:,:,2]
+plt.imshow(gray_img, cmap='gray')
+plt.savefig("test_pca.png")
