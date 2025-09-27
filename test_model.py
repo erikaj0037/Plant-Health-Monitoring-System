@@ -26,9 +26,9 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from torchsummary import summary
-# import seaborn as sns
+import seaborn as sns
 import pandas as pd
-import matplotlib as plt
+import matplotlib.pyplot as plt
 from train_reduction import *
 
 writer = SummaryWriter()
@@ -59,28 +59,51 @@ class TestModel():
 
         return png_file
     
-    def save_anomalous_image(self, image_info_index, image_losses, bin_threshold):
+    def save_anomalous_image(self, image_info_index, image_losses, labels, bin_threshold):
         anomaly_loss_threshold = self.anomaly_loss_threshold(bin_threshold, image_losses)
         #read in rgb png
         with open('./datasets/split_data/test/info.pkl', 'rb') as f:
             info = pickle.load(f)
+        print(image_info_index)
 
-        image_info = info[image_info_index]
-        image_path = Path(r"./datasets/raw_data/" + image_info[0] + "/" + image_info[1] +"/" + image_info[2] + "/")
-        png_file = self.get_png(image_path)
-        image_rgb = None
-        if png_file:
-            image_rgb = cv2.imread(filename = png_file, flags = cv2.IMREAD_COLOR_RGB)
+        for i in range(len(image_info_index)):
 
-            locs = torch.where(image_losses > anomaly_loss_threshold)
-            image_rgb[locs[0], locs[1]] = np.array([255,0,0])
+            image_info = info[image_info_index[i]]
+            image_path = Path(r"./datasets/raw_data/" + image_info[0] + "/" + image_info[1] + "/" + image_info[2] + "/")
+            png_file = self.get_png(image_path)
+            image_rgb = None
 
-            anom_image_path = self.model_path + "test_images/"
-            os.makedirs(anom_image_path, exist_ok=True)
-            plt.imshow(image_rgb)
-            plt.savefig(anom_image_path + str(image_info) + ".png")
-        
+            if png_file:
 
+                image_rgb = cv2.imread(filename = png_file, flags = cv2.IMREAD_COLOR_RGB)
+                image_rgb = cv2.rotate(image_rgb, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                locs = torch.where(image_losses[i] > anomaly_loss_threshold)
+                image_rgb[locs[1], locs[2]] = np.array([0,0,255])
+                image_rgb[labels[i,:,0], labels[i,:,1]] = np.array([255, 165, 0])
+                anom_image_path = self.model_path + "test_images/"
+                os.makedirs(anom_image_path, exist_ok=True)
+                plt.imshow(image_rgb)
+                plt.savefig(anom_image_path + str(image_info) + ".png")
+    
+    def sample(self, image_losses):
+
+        num_samples = 1000000
+        losses = torch.flatten(image_losses)
+        probabilities = torch.ones_like(losses) * 1/num_samples
+        # Sample 3 elements with replacement
+        sampled_indices = torch.multinomial(probabilities, num_samples=num_samples, replacement=False)
+        sampled_values = losses[sampled_indices]
+        return sampled_values
+
+    def plot_loss_distribution(self, image_losses, batch):
+        sample_values = self.sample(image_losses)
+        plt.figure()
+        plt.ylim(0, 200)
+        hist = sns.histplot(data=pd.DataFrame({'Loss': sample_values.numpy()}), x="Loss", kde = True, stat="density")
+        plot_path = self.model_path + "plots/"
+        os.makedirs(plot_path, exist_ok=True)
+        hist_fig = hist.get_figure()
+        hist_fig.savefig(plot_path + "batch-" + str(batch) + ".png") 
 
     def test(self, data_loader_test: DataLoader, model: nn.Module, criterion: nn.modules.loss._Loss, global_step = int):
         iter_time = AverageMeter()
@@ -104,15 +127,17 @@ class TestModel():
                 out = model(data)
                 # seg, out = model(data)
                 loss = criterion(out, data)
-                self.save_anomalous_image(info_index, loss, 99)
-                loss = torch.mean(loss)
-                writer.add_scalar("Test Loss/Index", loss, global_step = global_step) 
+                self.save_anomalous_image(info_index, loss, labels, 20)
+                loss_mean = torch.mean(loss)
+                writer.add_scalar("Test Loss/Index", loss_mean, global_step = global_step) 
                 global_step += 1
     #             loss_list = torch.cat((loss_list, loss), dim = 0)
     #             loss_reduced = torch.mean(loss)
     #             label_list = torch.cat((label_list, labels))
     # #         batch_acc = accuracy(out, target)
-            losses.update(loss, out.shape[0])
+            losses.update(loss_mean, out.shape[0])
+            self.plot_loss_distribution(loss, idx)
+
     # #         acc.update(batch_acc, out.shape[0])
 
     #         last_idx = 100    
