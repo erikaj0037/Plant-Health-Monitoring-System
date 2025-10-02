@@ -31,10 +31,11 @@ import pandas as pd
 # plt.imshow(gray_img, cmap='gray')
 # plt.savefig("test0.png")
 
-# hdr_file = Path(r'./datasets/apple_fireblight/july21/day_10/plant_1/REFLECTANCE_2090.hdr')
-# data_file = Path(r'./datasets/apple_fireblight/july21/day_10/plant_1/REFLECTANCE_2090.dat')
-# image = envi.open(hdr_file, data_file)
+hdr_file = Path(r'./datasets/raw_data/july21/day_10/plant_1/REFLECTANCE_2090.hdr')
+data_file = Path(r'./datasets/raw_data/july21/day_10/plant_1/REFLECTANCE_2090.dat')
+image = envi.open(hdr_file, data_file)
 # save_rgb('rgb0.jpg', image, [70, 53, 19])
+view_cube(image, [70, 53, 19])
 
 # rgb_img = cv2.imread("rgb0.jpg")
 # label_list = np.array(labels[0])
@@ -117,9 +118,9 @@ import pandas as pd
 # print(labels)
 
 
-with open('./datasets/reduced_data/july21/images.pkl', 'rb') as f:
-    images = pickle.load(f)
+# with open('./datasets/reduced_data/july21/images.pkl', 'rb') as f:
+#     images = pickle.load(f)
 
-gray_img = images[0,:,:,2]
-plt.imshow(gray_img, cmap='gray')
-plt.savefig("test_pca.png")
+# gray_img = images[0,:,:,2]
+# plt.imshow(gray_img, cmap='gray')
+# plt.savefig("test_pca.png")

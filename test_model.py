@@ -82,6 +82,7 @@ class TestModel():
                 image_rgb[labels[i,:,0], labels[i,:,1]] = np.array([255, 165, 0])
                 anom_image_path = self.model_path + "test_images/"
                 os.makedirs(anom_image_path, exist_ok=True)
+                plt.figure()
                 plt.imshow(image_rgb)
                 plt.savefig(anom_image_path + str(image_info) + ".png")
     
@@ -127,7 +128,7 @@ class TestModel():
                 out = model(data)
                 # seg, out = model(data)
                 loss = criterion(out, data)
-                self.save_anomalous_image(info_index, loss, labels, 20)
+                self.save_anomalous_image(info_index, loss, labels, 50)
                 loss_mean = torch.mean(loss)
                 writer.add_scalar("Test Loss/Index", loss_mean, global_step = global_step) 
                 global_step += 1
